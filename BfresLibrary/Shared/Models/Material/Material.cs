@@ -125,6 +125,8 @@ namespace BfresLibrary
         [Browsable(false)]
         public byte[] VolatileFlags { get; set; }
 
+        public Dictionary<string, Dictionary<string, int>> ShaderLocationMapping { get; set; }
+
         // TODO: Methods to access ShaderParam variable values.
 
         internal long[] TextureSlotArray { get; set; }

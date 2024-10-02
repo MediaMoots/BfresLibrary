@@ -81,6 +81,8 @@ namespace BfresLibrary.TextConvert
 
             public byte[] VolatileFlags { get; set; }
 
+            public Dictionary<string, Dictionary<string, int>> ShaderLocationMapping;
+
             public MaterialStruct()
             {
                 Parameters = new Dictionary<string, object>();
@@ -190,6 +192,7 @@ namespace BfresLibrary.TextConvert
             mat.RenderInfos = new ResDict<RenderInfo>();
             mat.ShaderParamData = new byte[0];
             mat.VolatileFlags = new byte[0];
+            mat.ShaderLocationMapping = matJson.ShaderLocationMapping;
 
             if (matJson.RenderState != null)
                 mat.RenderState = matJson.RenderState;
