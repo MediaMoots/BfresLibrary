@@ -81,6 +81,8 @@ namespace BfresLibrary.TextConvert
 
             public byte[] VolatileFlags { get; set; }
 
+            public int[] ParamIndices { get; set; }
+
             public Dictionary<string, Dictionary<string, int>> ShaderLocationMapping;
 
             public MaterialStruct()
@@ -113,6 +115,7 @@ namespace BfresLibrary.TextConvert
                 matConv.RenderState = material.RenderState;
 
             matConv.VolatileFlags = material.VolatileFlags;
+            matConv.ParamIndices = material.ParamIndices;
             matConv.Textures = new List<string>();
             foreach (var tex in material.TextureRefs)
                 matConv.Textures.Add(tex.Name);
@@ -134,7 +137,7 @@ namespace BfresLibrary.TextConvert
             //This includes skin counts and vertex layouts
             if (parentModel != null) {
                 foreach (var shape in parentModel.Shapes.Values) {
-                    if (parentModel.Materials[shape.MaterialIndex] == material)
+                    if (parentModel.Materials.ContainsKey(shape.MaterialIndex.ToString()) && parentModel.Materials[shape.MaterialIndex] == material)
                     {
                         matConv.MeshInfo.Add(CreateMeshInfo(shape, shape.VertexBuffer));
                     }
@@ -207,6 +210,7 @@ namespace BfresLibrary.TextConvert
             mat.SamplerSlotArray = new long[matJson.Textures.Count];
 
             mat.VolatileFlags = matJson.VolatileFlags;
+            mat.ParamIndices = matJson.ParamIndices;
             foreach (var param in matJson.Parameters)
             {
                 string type = param.Key.Split('|')[0];
