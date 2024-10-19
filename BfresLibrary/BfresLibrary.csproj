@@ -24,14 +24,12 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Syroot.Maths" Version="1.5.3" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="Syroot.BinaryData">
-      <HintPath>..\Libraries\Syroot.BinaryData.dll</HintPath>
-    </Reference>
-    <Reference Include="Syroot.Maths">
-      <HintPath>..\Libraries\Syroot.Maths.dll</HintPath>
-    </Reference>
+	<Reference Include="Syroot.BinaryData">
+		<HintPath>..\Libraries\Syroot.BinaryData.dll</HintPath>
+	</Reference>
     <Reference Include="Syroot.NintenTools.NSW.Bntx">
       <HintPath>..\Libraries\Syroot.NintenTools.NSW.Bntx.dll</HintPath>
     </Reference>
