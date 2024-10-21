@@ -11,6 +11,38 @@ using BfresLibrary.TextConvert;
 
 namespace BfresLibrary.Helpers
 {
+    public class NormalizeZeroConverter : JsonConverter
+    {
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        {
+            // Handle both double and float types and normalize -0 to 0.
+            if (value is double dValue)
+            {
+                writer.WriteValue(dValue == 0.0 ? 0.0 : dValue);
+            }
+            else if (value is float fValue)
+            {
+                writer.WriteValue(fValue == 0.0f ? 0.0f : fValue);
+            }
+            else
+            {
+                throw new JsonSerializationException("Expected double or float value.");
+            }
+        }
+
+        public override bool CanConvert(Type objectType)
+        {
+            return objectType == typeof(double) || objectType == typeof(float);
+        }
+
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        {
+            throw new NotImplementedException("Only writing is supported.");
+        }
+
+        public override bool CanRead => false;
+    }
+
     public class SkeletalAnimHelper
     {
         public string Name { get; set; }
@@ -55,7 +87,7 @@ namespace BfresLibrary.Helpers
                         rotation.X * CurveAnimHelper.Rad2Deg,
                         rotation.Y * CurveAnimHelper.Rad2Deg,
                         rotation.Z * CurveAnimHelper.Rad2Deg,
-                        rotation.W);
+                        1.0f);
                 }
 
                 boneAnimConv.BaseData = new BaseDataHelper()
@@ -89,7 +121,12 @@ namespace BfresLibrary.Helpers
                 return settings;
             };
 
-            return JsonConvert.SerializeObject(animConv, Formatting.Indented);
+            var settings = new JsonSerializerSettings
+            {
+                Converters = new List<JsonConverter> { new NormalizeZeroConverter() }
+            };
+
+            return JsonConvert.SerializeObject(animConv, Formatting.Indented, settings);
         }
 
         public static SkeletalAnim FromStruct(SkeletalAnimHelper skelAnim)
