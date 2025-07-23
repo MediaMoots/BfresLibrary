@@ -7,6 +7,7 @@ using System.Text;
 using Syroot.Maths;
 using Syroot.BinaryData;
 using Newtonsoft.Json.Linq;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace BfresLibrary.Core
 {
@@ -115,6 +116,19 @@ namespace BfresLibrary.Core
                 var buffer = new VertexBuffer();
                 ((IResData)buffer).Load(this);
                 ((Shape)ImportableFile).VertexBuffer = buffer;
+            }
+            else if (ImportableFile is Model)
+            {
+                long test = BufferInfo.BufferOffset;
+
+                long BufferInfPos = ReadInt64();
+                using (TemporarySeek(BufferInfPos, SeekOrigin.Begin))
+                {
+                    Seek(8);
+                    BufferInfo.BufferOffset = ReadInt64();
+                }
+                ((IResData)ImportableFile).Load(this);
+                BufferInfo.BufferOffset = test;
             }
             else
             {

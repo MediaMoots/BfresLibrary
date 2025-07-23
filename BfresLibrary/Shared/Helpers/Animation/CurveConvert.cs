@@ -134,6 +134,13 @@ namespace BfresLibrary
             if (curve.CurveType == AnimCurveType.Cubic) curve.Keys = new float[keys.Count, 4];
             if (curve.CurveType == AnimCurveType.Linear) curve.Keys = new float[keys.Count, 2];
 
+            //type overrides for santity check
+            var maxFrame = curve.Frames.Max(x => x);
+            if (maxFrame > 255 && curve.FrameType == AnimCurveFrameType.Byte)
+                curve.FrameType = AnimCurveFrameType.Decimal10x5;
+            if (maxFrame > ushort.MaxValue)
+                curve.FrameType = AnimCurveFrameType.Single;
+
             for (int i = 0; i < keys.Count; i++)
             {
                 switch (curve.CurveType)
@@ -180,14 +187,41 @@ namespace BfresLibrary
                         curve.KeyStepBoolData[i] = booleanKey.Value;
                         break;
                     case AnimCurveType.Linear:
-                        var linearKey = ToObject<LinearKeyFrame>(keys[i]);
-                        float linearValue = linearKey.Value;
-                        if (isDegrees)
+                        if (keys[i] is LinearKeyFrame)
                         {
-                            linearValue *= Deg2Rad;
+                            var linearKey = ToObject<LinearKeyFrame>(keys[i]);
+                            float linearValue = linearKey.Value;
+                            if (isDegrees)
+                            {
+                                linearValue *= Deg2Rad;
+                            }
+                            curve.Keys[i, 0] = linearValue;
+                            curve.Keys[i, 1] = linearKey.Delta;
                         }
-                        curve.Keys[i, 0] = linearValue;
-                        curve.Keys[i, 1] = linearKey.Delta;
+                        else
+                        {
+                            var linearKey = ToObject<KeyFrame>(keys[i]);
+                            float linearValue = linearKey.Value;
+                            if (isDegrees)
+                            {
+                                linearValue *= Deg2Rad;
+                            }
+
+                            float delta = 0;
+
+                            if (i < keys.Count - 1)
+                            {
+                                var nextKey = ToObject<KeyFrame>(keys[i + 1]);
+                                float nextLinearValue = nextKey.Value;
+                                if (isDegrees)
+                                    nextLinearValue *= Deg2Rad;
+
+                                delta = nextLinearValue - linearValue;
+                            }
+
+                            curve.Keys[i, 0] = linearValue;
+                            curve.Keys[i, 1] = delta;
+                        }
                         break;
                     case AnimCurveType.StepInt:
                         var stepKey = ToObject<KeyFrame>(keys[i]);
