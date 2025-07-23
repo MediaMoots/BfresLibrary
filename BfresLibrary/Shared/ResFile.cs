@@ -574,6 +574,8 @@ namespace BfresLibrary
                 {
                     if (subAnim.Curves.Count > 0)
                         subAnim.TexturePatternCurveIndex = curveIndex;
+                    if (subAnim.ParamAnimInfos.Count > 0)
+                        subAnim.ShaderParamCurveIndex = curveIndex;
                     subAnim.InfoIndex = infoIndex;
                     curveIndex += subAnim.Curves.Count;
                     infoIndex += subAnim.PatternAnimInfos.Count;
@@ -641,6 +643,8 @@ namespace BfresLibrary
                     anim.BakedSize = 0;
                 foreach (var subAnim in anim.MaterialAnimDataList)
                 {
+                    if (subAnim.Curves.Count > 0)
+                        subAnim.TexturePatternCurveIndex = curveIndex;
                     if (subAnim.Curves.Count > 0)
                         subAnim.ShaderParamCurveIndex = curveIndex;
                     subAnim.InfoIndex = infoIndex;

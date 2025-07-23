@@ -26,7 +26,9 @@ namespace BfresLibrary
         public string WrapMode { get; set; }
 
         public float Scale { get; set; }
-        public float Offset { get; set; }
+
+        [JsonConverter(typeof(DWordJsonConverter))]
+        public DWord Offset { get; set; }
 
         [JsonProperty(ItemConverterType = typeof(NoFormattingConverter))]
         public Dictionary<float, object> KeyFrames { get; set; }
@@ -178,32 +180,18 @@ namespace BfresLibrary
                         curve.KeyStepBoolData[i] = booleanKey.Value;
                         break;
                     case AnimCurveType.Linear:
-                        if (keys[i] is LinearKeyFrame)
+                        var linearKey = ToObject<LinearKeyFrame>(keys[i]);
+                        float linearValue = linearKey.Value;
+                        if (isDegrees)
                         {
-                            var linearKey = ToObject<LinearKeyFrame>(keys[i]);
-                            float linearValue = linearKey.Value;
-                            if (isDegrees)
-                            {
-                                linearValue *= Deg2Rad;
-                            }
-                            curve.Keys[i, 0] = linearValue;
-                            curve.Keys[i, 1] = linearKey.Delta;
+                            linearValue *= Deg2Rad;
                         }
-                        else
-                        {
-                            var linearKey = ToObject<KeyFrame>(keys[i]);
-                            float linearValue = linearKey.Value;
-                            if (isDegrees)
-                            {
-                                linearValue *= Deg2Rad;
-                            }
-                            curve.Keys[i, 0] = linearValue;
-                            curve.Keys[i, 1] = 0;
-                        }
+                        curve.Keys[i, 0] = linearValue;
+                        curve.Keys[i, 1] = linearKey.Delta;
                         break;
                     case AnimCurveType.StepInt:
                         var stepKey = ToObject<KeyFrame>(keys[i]);
-                        curve.Keys[i, 0] = stepKey.Value;
+                        curve.Keys[i, 0] = (int)stepKey.Value - (int)curveJson.Offset;
                         break;
                 }
             }

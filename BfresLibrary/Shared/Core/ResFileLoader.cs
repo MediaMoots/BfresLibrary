@@ -367,9 +367,8 @@ namespace BfresLibrary.Core
             string signature = ReadString(sizeof(uint), Encoding.ASCII);
             if (signature != validSignature)
             {
-                 System.Console.WriteLine($"Invalid signature, expected '{validSignature}' but got '{signature}' at position {Position}.");
-
-                // throw new ResException($"Invalid signature, expected '{validSignature}' but got '{signature}' at position {Position}.");
+                System.Console.WriteLine($"Invalid signature, expected '{validSignature}' but got '{signature}' at position {Position}.");
+                throw new ResException($"Invalid signature, expected '{validSignature}' but got '{signature}' at position {Position}.");
             }
         }
 

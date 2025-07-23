@@ -1,5 +1,6 @@
 ﻿using BfresLibrary.Core;
 using System.ComponentModel;
+using Newtonsoft.Json;
 using System.Collections.Generic;
 
 namespace BfresLibrary
@@ -111,6 +112,7 @@ namespace BfresLibrary
         /// <summary>
         /// Gets or sets the offset to add to the values of the curve (after multiplicating them).
         /// </summary>
+        [JsonConverter(typeof(DWordJsonConverter))]
         public DWord Offset { get; set; }
 
         /// <summary>
@@ -567,6 +569,7 @@ namespace BfresLibrary
         /// </summary>
         public uint AnimDataOffset;
 
+        [JsonConverter(typeof(DWordJsonConverter))]
         public DWord Value;
     }
 }

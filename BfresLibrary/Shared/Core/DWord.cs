@@ -1,9 +1,71 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Newtonsoft.Json;
 
 namespace BfresLibrary
 {
+    public class DWordJsonConverter : JsonConverter<DWord>
+    {
+        public override void WriteJson(JsonWriter writer, DWord value, JsonSerializer serializer)
+        {
+            writer.WriteValue($"0x{value.UInt32:X8}"); // Store as hex string
+        }
+
+        public override DWord ReadJson(JsonReader reader, Type objectType, DWord existingValue, bool hasExistingValue, JsonSerializer serializer)
+        {
+            if (reader.Value == null)
+            {
+                throw new JsonSerializationException("Expected a value for DWord, but found null.");
+            }
+
+            try
+            {
+                // Handle different types of values
+                if (reader.Value is string hexString)
+                {
+                    // If the value is a string, assume it's a hex string (e.g., "0x1A2B3C4D")
+                    if (hexString.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                    {
+                        hexString = hexString.Substring(2); // Remove "0x" prefix
+                    }
+                    return new DWord { UInt32 = Convert.ToUInt32(hexString, 16) };
+                }
+                else if (reader.Value is long longValue)
+                {
+                    // If the value is a long (Int64), convert it to UInt32
+                    if (longValue < 0 || longValue > uint.MaxValue)
+                    {
+                        throw new JsonSerializationException($"Value {longValue} is out of range for UInt32.");
+                    }
+                    return new DWord { UInt32 = (uint)longValue };
+                }
+                else if (reader.Value is int intValue)
+                {
+                    // If the value is an int (Int32), convert it to UInt32
+                    if (intValue < 0)
+                    {
+                        throw new JsonSerializationException($"Value {intValue} is negative and cannot be converted to UInt32.");
+                    }
+                    return new DWord { UInt32 = (uint)intValue };
+                }
+                else
+                {
+                    // Handle unexpected types
+                    throw new JsonSerializationException($"Unexpected type for DWord: {reader.Value.GetType().Name}. Expected a string (hex), int, or long.");
+                }
+            }
+            catch (FormatException ex)
+            {
+                throw new JsonSerializationException($"Invalid hex string format: {reader.Value}. Expected a valid hexadecimal string.", ex);
+            }
+            catch (OverflowException ex)
+            {
+                throw new JsonSerializationException($"Value {reader.Value} is out of range for UInt32.", ex);
+            }
+        }
+    }
+
     /// <summary>
     /// Represents a 4-byte value which can hold differently typed data.
     /// </summary>

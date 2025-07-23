@@ -40,6 +40,7 @@ namespace BfresLibrary.TextConvert
 
             public List<AnimConstant> Constants { get; set; }
             public List<CurveAnimHelper> Curves { get; set; }
+
         }
 
         public static string ToJson(MaterialAnim anim)
@@ -117,12 +118,14 @@ namespace BfresLibrary.TextConvert
             if (animJson.Baked)
                 anim.Flags |= MaterialAnim.MaterialAnimFlags.BakedCurve;
 
+            anim.TextureNames.Clear();
             foreach (var tex in animJson.Textures)
                 anim.TextureNames.Add(tex, new TextureRef()
                 {
                     Name = tex,
                 });
 
+            anim.MaterialAnimDataList.Clear();
             foreach (var matAnimJson in animJson.MaterialAnims) {
                 MaterialAnimData matAnim = new MaterialAnimData();
                 anim.MaterialAnimDataList.Add(matAnim);
