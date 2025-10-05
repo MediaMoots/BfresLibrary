@@ -130,6 +130,7 @@ namespace BfresLibrary
             var keys = curveJson.KeyFrames.Values.ToList();
             var frames = curveJson.KeyFrames.Keys.ToList();
             curve.Frames = frames.ToArray();
+            curve.KeyStepBoolData = curveJson.KeyFrames.Select(x => ToObject<BooleanKey>(x.Value).Value).ToArray();
             curve.Keys = new float[keys.Count, 1];
             if (curve.CurveType == AnimCurveType.Cubic) curve.Keys = new float[keys.Count, 4];
             if (curve.CurveType == AnimCurveType.Linear) curve.Keys = new float[keys.Count, 2];
