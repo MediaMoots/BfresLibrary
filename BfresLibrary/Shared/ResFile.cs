@@ -665,14 +665,23 @@ namespace BfresLibrary
             foreach (var anim in MatVisibilityAnims.Values)
             {
                 int curveIndex = 0;
-                int infoIndex = 0;
+                int curveConstantIndex = 0;
                 if (calculateBakeSizes)
                     anim.BakedSize = 0;
                 foreach (var subAnim in anim.MaterialAnimDataList)
                 {
                     if (subAnim.Curves.Count > 0)
-                        subAnim.VisalCurveIndex = curveIndex;
+                        subAnim.VisualCurveIndex = 0;
+
+                    if (subAnim.Curves.Count > 0)
+                        subAnim.VisualConstantIndex = curveIndex;
                     curveIndex += subAnim.Curves.Count;
+
+                    if (subAnim.Constants != null && subAnim.Constants.Count > 0)
+                    {
+                        subAnim.BeginVisualConstantIndex = curveConstantIndex;
+                        curveConstantIndex += subAnim.Constants.Count;
+                    }
 
                     if (calculateBakeSizes)
                     {

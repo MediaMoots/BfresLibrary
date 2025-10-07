@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using Syroot.Maths;
 using BfresLibrary.Core;
+using System.Linq;
 
 namespace BfresLibrary
 {
@@ -23,8 +24,8 @@ namespace BfresLibrary
 
             ShaderParamCurveIndex = -1;
             TexturePatternCurveIndex = -1;
-            BeginVisalConstantIndex = -1;
-            VisalCurveIndex = -1;
+            BeginVisualConstantIndex = -1;
+            VisualCurveIndex = -1;
             VisualConstantIndex = -1;
         }
 
@@ -62,8 +63,8 @@ namespace BfresLibrary
 
         public int ShaderParamCurveIndex { get; set; } = -1;
         public int TexturePatternCurveIndex { get; set; } = -1;
-        public int BeginVisalConstantIndex { get; set; } = -1;
-        public int VisalCurveIndex { get; set; } = -1;
+        public int BeginVisualConstantIndex { get; set; } = -1;
+        public int VisualCurveIndex { get; set; } = -1;
         public int VisualConstantIndex { get; set; } = -1;
         public int InfoIndex { get; set; } = 0;
 
@@ -73,7 +74,7 @@ namespace BfresLibrary
         {
             get
             {
-                return 0;
+                return (ushort)Curves.Count(x => x.CurveType == AnimCurveType.StepBool);
             }
         }
 
@@ -140,8 +141,8 @@ namespace BfresLibrary
                 ShaderParamCurveIndex = loader.ReadUInt16();
                 TexturePatternCurveIndex = loader.ReadUInt16();
                 VisualConstantIndex = loader.ReadUInt16();
-                VisalCurveIndex = loader.ReadUInt16();
-                BeginVisalConstantIndex = loader.ReadUInt16();
+                VisualCurveIndex = loader.ReadUInt16();
+                BeginVisualConstantIndex = loader.ReadUInt16();
                 ushort ShaderParamAnimCount = loader.ReadUInt16();
                 ushort TexutrePatternAnimCount = loader.ReadUInt16();
                 ushort ConstantAnimCount = loader.ReadUInt16();
@@ -211,8 +212,8 @@ namespace BfresLibrary
                 saver.Write((ushort)ShaderParamCurveIndex);
                 saver.Write((ushort)TexturePatternCurveIndex);
                 saver.Write((ushort)VisualConstantIndex);
-                saver.Write((ushort)VisalCurveIndex);
-                saver.Write((ushort)BeginVisalConstantIndex);
+                saver.Write((ushort)VisualCurveIndex);
+                saver.Write((ushort)BeginVisualConstantIndex);
                 saver.Write((ushort)ParamAnimInfos.Count);
                 saver.Write((ushort)PatternAnimInfos.Count);
                 if (Constants != null)
