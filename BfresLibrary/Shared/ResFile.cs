@@ -549,6 +549,7 @@ namespace BfresLibrary
             {
                 int curveIndex = 0;
                 int infoIndex = 0;
+
                 if (calculateBakeSizes)
                     anim.BakedSize = 0;
                 foreach (VertexShapeAnim subAnim in anim.VertexShapeAnims)

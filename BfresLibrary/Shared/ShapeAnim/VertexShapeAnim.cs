@@ -10,8 +10,16 @@ namespace BfresLibrary
     [DebuggerDisplay(nameof(VertexShapeAnim) + " {" + nameof(Name) + "}")]
     public class VertexShapeAnim : IResData, INamed
     {
+        public VertexShapeAnim()
+        {
+            Name = "";
+
+            KeyShapeAnimInfos = new List<KeyShapeAnimInfo>();
+            Curves = new List<AnimCurve>();
+        }
+
         // ---- PROPERTIES ---------------------------------------------------------------------------------------------
-        
+
         /// <summary>
         /// Gets or sets the name of the animated <see cref="Shape"/>.
         /// </summary>

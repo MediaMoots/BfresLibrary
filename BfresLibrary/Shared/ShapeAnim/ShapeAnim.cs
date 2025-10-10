@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using BfresLibrary.Core;
+using BfresLibrary.TextConvert;
 
 namespace BfresLibrary
 {
@@ -26,7 +28,6 @@ namespace BfresLibrary
             VertexShapeAnims = new List<VertexShapeAnim>();
             FrameCount = 0;
             BakedSize = 0;
-            BindIndices = new ushort[0];
             UserData = new ResDict<UserData>();
         }
 
@@ -86,12 +87,20 @@ namespace BfresLibrary
 
         // ---- METHODS (PUBLIC) ---------------------------------------------------------------------------------------
 
-        public void Import(string FileName, ResFile ResFile) {
-            ResFileLoader.ImportSection(FileName, this, ResFile);
+        public void Import(string FileName, ResFile ResFile)
+        {
+            if (FileName.EndsWith(".json"))
+                ShapeAnimConvert.FromJson(this, File.ReadAllText(FileName));
+            else
+                ResFileLoader.ImportSection(FileName, this, ResFile);
         }
 
-        public void Export(string FileName, ResFile ResFile) {
-            ResFileSaver.ExportSection(FileName, this, ResFile);
+        public void Export(string FileName, ResFile ResFile)
+        {
+            if (FileName.EndsWith(".json"))
+                File.WriteAllText(FileName, ShapeAnimConvert.ToJson(this));
+            else
+                ResFileSaver.ExportSection(FileName, this, ResFile);
         }
 
         // ---- METHODS ------------------------------------------------------------------------------------------------
@@ -180,22 +189,22 @@ namespace BfresLibrary
         internal long PosVertexShapeAnimsOffset;
         internal long PosUserDataOffset;
         internal long PosUserDataDictOffset;
-    }
-
-    /// <summary>
-    /// Represents flags specifying how animation data is stored or should be played.
-    /// </summary>
-    [Flags]
-    public enum ShapeAnimFlags : ushort
-    {
-        /// <summary>
-        /// The stored curve data has been baked.
-        /// </summary>
-        BakedCurve = 1 << 0,
 
         /// <summary>
-        /// The animation repeats from the start after the last frame has been played.
+        /// Represents flags specifying how animation data is stored or should be played.
         /// </summary>
-        Looping = 1 << 2
+        [Flags]
+        public enum ShapeAnimFlags : ushort
+        {
+            /// <summary>
+            /// The stored curve data has been baked.
+            /// </summary>
+            BakedCurve = 1 << 0,
+
+            /// <summary>
+            /// The animation repeats from the start after the last frame has been played.
+            /// </summary>
+            Looping = 1 << 2
+        }
     }
 }

@@ -12,10 +12,13 @@ namespace BfresLibrary.Switch
     {
         internal static void Read(ResFileSwitchLoader loader, ShapeAnim shapeAnim)
         {
-            if (loader.ResFile.VersionMajor2 >= 9)
-                shapeAnim.Flags = (ShapeAnimFlags)loader.ReadUInt32();
-            else
-                loader.LoadHeaderBlock();
+            if (loader.ResFile.VersionMajor2 < 9)
+            {
+                throw new Exception();
+            }
+
+            shapeAnim.Flags = loader.ReadEnum<ShapeAnim.ShapeAnimFlags>(true);
+            loader.ReadUInt16();
 
             shapeAnim.Name = loader.LoadString();
             shapeAnim.Path = loader.LoadString();
@@ -23,13 +26,12 @@ namespace BfresLibrary.Switch
             uint BindIndicesOffset = loader.ReadOffset();
             uint VertexShapeAnimsArrayOffset = loader.ReadOffset();
             shapeAnim.UserData = loader.LoadDictValues<UserData>();
-            if (loader.ResFile.VersionMajor2 < 9)
-                shapeAnim.Flags = (ShapeAnimFlags)loader.ReadInt16();
+
+            shapeAnim.FrameCount = loader.ReadInt32();
+            shapeAnim.BakedSize = loader.ReadUInt32();
             ushort numUserData = loader.ReadUInt16();
             ushort numVertexShapeAnim = loader.ReadUInt16();
             ushort numKeyShapeAnim = loader.ReadUInt16();
-            shapeAnim.FrameCount = loader.ReadInt32();
-            shapeAnim.BakedSize = loader.ReadUInt32();
             ushort numCurve = loader.ReadUInt16();
 
             shapeAnim.BindIndices = loader.LoadCustom(() => loader.ReadUInt16s(numVertexShapeAnim), BindIndicesOffset);
@@ -38,13 +40,28 @@ namespace BfresLibrary.Switch
 
         public static void Write(ResFileSwitchSaver saver, ShapeAnim shapeAnim)
         {
-            if (saver.ResFile.VersionMajor2 >= 9)
-                saver.Write((uint)shapeAnim.Flags);
-            else
-                saver.SaveHeaderBlock();
+            if (saver.ResFile.VersionMajor2 < 9)
+            {
+                throw new Exception();
+            }
+
+            saver.Write(shapeAnim.Flags, true);
+            saver.Write((ushort)0);
 
             saver.SaveString(shapeAnim.Name);
             saver.SaveString(shapeAnim.Path);
+            shapeAnim.PosBindModelOffset = saver.SaveOffset();
+            shapeAnim.PosBindIndicesOffset = saver.SaveOffset();
+            shapeAnim.PosVertexShapeAnimsOffset = saver.SaveOffset();
+            shapeAnim.PosUserDataOffset = saver.SaveOffset();
+            shapeAnim.PosUserDataDictOffset = saver.SaveOffset();
+
+            saver.Write(shapeAnim.FrameCount);
+            saver.Write(shapeAnim.BakedSize);
+            saver.Write((ushort)shapeAnim.UserData.Count);
+            saver.Write((ushort)shapeAnim.VertexShapeAnims.Count);
+            saver.Write((ushort)shapeAnim.VertexShapeAnims.Sum((x) => x.KeyShapeAnimInfos.Count));
+            saver.Write((ushort)shapeAnim.VertexShapeAnims.Sum((x) => x.Curves.Count));
         }
     }
 }

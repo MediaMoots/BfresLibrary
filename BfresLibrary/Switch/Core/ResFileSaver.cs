@@ -505,7 +505,7 @@ namespace BfresLibrary.Switch.Core
                 if (ResFile.VersionMajor2 >= 9)
                 {
                     SaveRelocateEntryToSection(Position + 8, 2, (uint)ResFile.ShapeAnims.Count, 10, Section1, "Shape Animation");
-                    SaveRelocateEntryToSection(Position + 32, 6, (uint)ResFile.ShapeAnims.Count, 6, Section1, "Shape Animation");
+                    SaveRelocateEntryToSection(Position + 32, 5, (uint)ResFile.ShapeAnims.Count, 6, Section1, "Shape Animation");
                 }
                 else
                 {
@@ -1179,62 +1179,64 @@ namespace BfresLibrary.Switch.Core
 
         private void WriteShapeAnimations(ShapeAnim shpanim)
         {
-            if (shpanim.BindIndices.Length > 0)
+            if (shpanim.BindIndices != null && shpanim.BindIndices.Length > 0)
             {
+                Align(8);
                 WriteOffset(shpanim.PosBindIndicesOffset);
                 Write(shpanim.BindIndices);
             }
+
             if (shpanim.VertexShapeAnims.Count > 0)
             {
+                Align(8);
+                SaveRelocateEntryToSection(Position, 4, (uint)shpanim.VertexShapeAnims.Count, 2, Section1, "Vertex Shape Anim");
+
                 WriteOffset(shpanim.PosVertexShapeAnimsOffset);
-                foreach (VertexShapeAnim vtxanim in shpanim.VertexShapeAnims)
+                foreach (var vtxanim in shpanim.VertexShapeAnims)
                     ((IResData)vtxanim).Save(this);
 
-                foreach (VertexShapeAnim vtxanim in shpanim.VertexShapeAnims)
+                foreach (var vtxanim in shpanim.VertexShapeAnims)
                 {
                     if (vtxanim.BaseDataList?.Length > 0)
                     {
+                        Align(8);
                         WriteOffset(vtxanim.PosBaseDataOffset);
                         Write(vtxanim.BaseDataList);
-                        Align(8);
                     }
+
                     if (vtxanim.KeyShapeAnimInfos?.Count > 0)
                     {
+                        Align(8);
+                        SaveRelocateEntryToSection(Position, 1, (uint)vtxanim.KeyShapeAnimInfos.Count, 1, Section1, "Key Shape Anim Info");
+
                         WriteOffset(vtxanim.PosKeyShapeAnimInfosOffset);
-                        foreach (var cr in vtxanim.KeyShapeAnimInfos)
-                            ((IResData)cr).Save(this);
+                        foreach (var info in vtxanim.KeyShapeAnimInfos)
+                            ((IResData)info).Save(this);
                     }
+
                     if (vtxanim.Curves.Count > 0)
                     {
                         Align(8);
                         SaveRelocateEntryToSection(Position, 2, (uint)vtxanim.Curves.Count, 4, Section1, "Animation Curve");
                         WriteOffset(vtxanim.PosCurvesOffset);
-                        foreach (AnimCurve cr in vtxanim.Curves)
-                            ((IResData)cr).Save(this);
+                        foreach (var cr in vtxanim.Curves) ((IResData)cr).Save(this);
 
-                        foreach (AnimCurve cr in vtxanim.Curves)
+                        foreach (var cr in vtxanim.Curves)
                         {
-                            WriteOffset(cr.PosFrameOffset);
-                            cr.SaveFrames(this);
-                            Align(8);
-
-                            WriteOffset(cr.PosKeyDataOffset);
-                            cr.SaveKeyData(this);
-                            Align(8);
+                            WriteOffset(cr.PosFrameOffset); cr.SaveFrames(this); Align(8);
+                            WriteOffset(cr.PosKeyDataOffset); cr.SaveKeyData(this); Align(8);
                         }
                     }
                 }
             }
+
             if (shpanim.UserData.Count > 0)
             {
-                WriteOffset(shpanim.PosUserDataOffset);
-                foreach (UserData data in shpanim.UserData.Values)
-                    ((IResData)data).Save(this);
-            }
-            if (shpanim.UserData.Count > 0)
-            {
+                SaveUserData(shpanim.UserData, shpanim.PosUserDataOffset);
                 WriteOffset(shpanim.PosUserDataDictOffset);
                 ((IResData)shpanim.UserData).Save(this);
+                SaveUserDataData(shpanim.UserData);
+                Align(8);
             }
         }
 
