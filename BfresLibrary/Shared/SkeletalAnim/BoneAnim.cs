@@ -295,40 +295,95 @@ namespace BfresLibrary
 
         public void CalculateTransformFlags()
         {
-            FlagsTransform = BoneAnimFlagsTransform.Identity;
-            foreach (var curve in Curves) {
-                switch (curve.AnimDataOffset)
-                {
-                    case 0x4:
-                    case 0x8:
-                    case 0xC:
-                        FlagsTransform &= ~BoneAnimFlagsTransform.ScaleOne;
-                        FlagsTransform &= ~BoneAnimFlagsTransform.ScaleUniform;
-                        break;
-                    case 0x10:
-                    case 0x14:
-                    case 0x18:
-                        FlagsTransform &= ~BoneAnimFlagsTransform.TranslateZero;
-                        break;
-                    case 0x20:
-                    case 0x24:
-                    case 0x28:
-                    case 0x2C:
-                        FlagsTransform &= ~BoneAnimFlagsTransform.RotateZero;
-                        break;
-                }
+            bool segmentScaleComp = FlagsTransform.HasFlag(BoneAnimFlagsTransform.SegmentScaleCompensate);
+
+            var curves = Curves ?? Array.Empty<AnimCurve>();
+            bool hasScaleCurves = HasCurveTarget(curves, AnimCurveTarget.Scale);
+            bool hasTranslationCurves = HasCurveTarget(curves, AnimCurveTarget.Translate);
+            bool hasRotationCurves = HasCurveTarget(curves, AnimCurveTarget.Rotate);
+
+            bool useTranslation = FlagsBase.HasFlag(BoneAnimFlagsBase.Translate);
+            bool useRotation = FlagsBase.HasFlag(BoneAnimFlagsBase.Rotate);
+            bool useScale = FlagsBase.HasFlag(BoneAnimFlagsBase.Scale);
+
+            bool translationZero = useTranslation && !hasTranslationCurves && VectorIsZero(BaseData.Translate);
+            bool rotationZero = useRotation && !hasRotationCurves && RotationIsZero(BaseData.Rotate);
+            bool scaleOne = useScale && !hasScaleCurves && ScaleIsIdentity(BaseData.Scale);
+
+            BoneAnimFlagsTransform flags = 0;
+            if (segmentScaleComp)
+                flags |= BoneAnimFlagsTransform.SegmentScaleCompensate;
+
+            if (translationZero && rotationZero && scaleOne)
+            {
+                flags |= BoneAnimFlagsTransform.Identity;
+                translationZero = rotationZero = scaleOne = false;
+            }
+            else if (translationZero && rotationZero)
+            {
+                flags |= BoneAnimFlagsTransform.RotateTranslateZero;
+                translationZero = rotationZero = false;
             }
 
-            if (BaseData.Rotate != Syroot.Maths.Vector4F.Zero)
-                FlagsTransform &= ~BoneAnimFlagsTransform.RotateZero;
-            if (BaseData.Scale != Syroot.Maths.Vector3F.One)
-                FlagsTransform &= ~BoneAnimFlagsTransform.ScaleOne;
-            if (BaseData.Scale.X != BaseData.Scale.Y ||
-                BaseData.Scale.Y != BaseData.Scale.Z ||
-                BaseData.Scale.X != BaseData.Scale.Z)
-                FlagsTransform &= ~BoneAnimFlagsTransform.ScaleUniform;
-            if (BaseData.Translate != Syroot.Maths.Vector3F.One)
-                FlagsTransform &= ~BoneAnimFlagsTransform.TranslateZero;
+            if (scaleOne)
+                flags |= BoneAnimFlagsTransform.ScaleOne;
+            if (translationZero)
+                flags |= BoneAnimFlagsTransform.TranslateZero;
+            if (rotationZero)
+                flags |= BoneAnimFlagsTransform.RotateZero;
+
+            FlagsTransform = flags;
+        }
+
+        private const float TransformEpsilon = 0.00001f;
+
+        private static bool HasCurveTarget(IEnumerable<AnimCurve> curves, AnimCurveTarget target)
+        {
+            foreach (var curve in curves)
+            {
+                switch (target)
+                {
+                    case AnimCurveTarget.Scale when IsScaleOffset(curve.AnimDataOffset):
+                        return true;
+                    case AnimCurveTarget.Translate when IsTranslateOffset(curve.AnimDataOffset):
+                        return true;
+                    case AnimCurveTarget.Rotate when IsRotateOffset(curve.AnimDataOffset):
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        private static bool IsScaleOffset(uint offset) => offset == 0x4 || offset == 0x8 || offset == 0xC;
+        private static bool IsTranslateOffset(uint offset) => offset == 0x10 || offset == 0x14 || offset == 0x18;
+        private static bool IsRotateOffset(uint offset) => offset == 0x20 || offset == 0x24 || offset == 0x28 || offset == 0x2C;
+
+        private static bool VectorIsZero(Syroot.Maths.Vector3F vector)
+        {
+            return Math.Abs(vector.X) <= TransformEpsilon &&
+                   Math.Abs(vector.Y) <= TransformEpsilon &&
+                   Math.Abs(vector.Z) <= TransformEpsilon;
+        }
+
+        private static bool ScaleIsIdentity(Syroot.Maths.Vector3F vector)
+        {
+            return Math.Abs(vector.X - 1f) <= TransformEpsilon &&
+                   Math.Abs(vector.Y - 1f) <= TransformEpsilon &&
+                   Math.Abs(vector.Z - 1f) <= TransformEpsilon;
+        }
+
+        private static bool RotationIsZero(Syroot.Maths.Vector4F vector)
+        {
+            return Math.Abs(vector.X) <= TransformEpsilon &&
+                   Math.Abs(vector.Y) <= TransformEpsilon &&
+                   Math.Abs(vector.Z) <= TransformEpsilon;
+        }
+
+        private enum AnimCurveTarget
+        {
+            Scale,
+            Translate,
+            Rotate
         }
 
         void IResData.Load(ResFileLoader loader)
