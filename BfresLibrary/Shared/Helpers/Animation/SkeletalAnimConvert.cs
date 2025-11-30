@@ -188,6 +188,7 @@ namespace BfresLibrary.Helpers
                         rotation.Z * CurveAnimHelper.Deg2Rad,
                         rotation.W);
                 }
+
                 boneAnim.BaseData = new BoneAnimData()
                 {
                     Flags = boneAnimJson.BaseData.Flags,
@@ -210,7 +211,7 @@ namespace BfresLibrary.Helpers
                     var curve = CurveAnimHelper.GenerateCurve(curveJson, (uint)target,
                         curveJson.Target.Contains("Rotate") && animJson.UseDegrees);
                     boneAnim.Curves.Add(curve);
-                    boneAnim.FlagsCurve = SetCurveTarget(target);
+                    boneAnim.FlagsCurve |= SetCurveTarget(target);
                 }
                 boneAnim.CalculateTransformFlags();
                 boneAnim.ApplySegmentScaleCompensate = boneAnimJson.SegmentScaleCompensate;
@@ -220,21 +221,20 @@ namespace BfresLibrary.Helpers
 
         static BoneAnimFlagsCurve SetCurveTarget(AnimTarget target)
         {
-            BoneAnimFlagsCurve flags = (BoneAnimFlagsCurve)0;
-            switch (target)
+            return target switch
             {
-                case AnimTarget.PositionX: flags |= BoneAnimFlagsCurve.TranslateX; break;
-                case AnimTarget.PositionY: flags |= BoneAnimFlagsCurve.TranslateY; break;
-                case AnimTarget.PositionZ: flags |= BoneAnimFlagsCurve.TranslateZ; break;
-                case AnimTarget.ScaleX: flags |= BoneAnimFlagsCurve.ScaleX; break;
-                case AnimTarget.ScaleY: flags |= BoneAnimFlagsCurve.ScaleY; break;
-                case AnimTarget.ScaleZ: flags |= BoneAnimFlagsCurve.ScaleZ; break;
-                case AnimTarget.RotateX: flags |= BoneAnimFlagsCurve.RotateX; break;
-                case AnimTarget.RotateY: flags |= BoneAnimFlagsCurve.RotateY; break;
-                case AnimTarget.RotateZ: flags |= BoneAnimFlagsCurve.RotateZ; break;
-                case AnimTarget.RotateW: flags |= BoneAnimFlagsCurve.RotateW; break;
-            }
-            return flags;
+                AnimTarget.PositionX => BoneAnimFlagsCurve.TranslateX,
+                AnimTarget.PositionY => BoneAnimFlagsCurve.TranslateY,
+                AnimTarget.PositionZ => BoneAnimFlagsCurve.TranslateZ,
+                AnimTarget.ScaleX => BoneAnimFlagsCurve.ScaleX,
+                AnimTarget.ScaleY => BoneAnimFlagsCurve.ScaleY,
+                AnimTarget.ScaleZ => BoneAnimFlagsCurve.ScaleZ,
+                AnimTarget.RotateX => BoneAnimFlagsCurve.RotateX,
+                AnimTarget.RotateY => BoneAnimFlagsCurve.RotateY,
+                AnimTarget.RotateZ => BoneAnimFlagsCurve.RotateZ,
+                AnimTarget.RotateW => BoneAnimFlagsCurve.RotateW,
+                _ => 0,
+            };
         }
 
         public enum AnimTarget
@@ -276,7 +276,7 @@ namespace BfresLibrary.Helpers
         public byte BeginBaseTranslate { get; set; }
 
         [JsonConverter(typeof(StringEnumConverter))]
-        public BoneAnimFlagsCurve FlagsCurve;
+        public BoneAnimFlagsCurve FlagsCurve { get; set; }
     }
 
     public struct BaseDataHelper
