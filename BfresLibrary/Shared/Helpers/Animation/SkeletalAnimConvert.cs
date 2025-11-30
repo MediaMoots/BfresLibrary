@@ -97,11 +97,6 @@ namespace BfresLibrary.Helpers
                 boneAnimConv.UseBaseTranslation = boneAnim.FlagsBase.HasFlag(BoneAnimFlagsBase.Translate);
                 boneAnimConv.UseBaseRotation = boneAnim.FlagsBase.HasFlag(BoneAnimFlagsBase.Rotate);
                 boneAnimConv.UseBaseScale = boneAnim.FlagsBase.HasFlag(BoneAnimFlagsBase.Scale);
-                boneAnimConv.FlagsTransform = boneAnim.FlagsTransform;
-                boneAnimConv.BeginBaseTranslate = boneAnim.BeginBaseTranslate;
-                boneAnimConv.BeginRotate = boneAnim.BeginRotate;
-                boneAnimConv.BeginTranslate = boneAnim.BeginTranslate;
-                boneAnimConv.FlagsCurve = boneAnim.FlagsCurve;
                 animConv.BoneAnims.Add(boneAnimConv);
 
                 foreach (var curve in boneAnim.Curves)
@@ -265,18 +260,6 @@ namespace BfresLibrary.Helpers
         public List<CurveAnimHelper> Curves { get; set; }
 
         public BaseDataHelper BaseData { get; set; }
-
-        [JsonConverter(typeof(StringEnumConverter))]
-        public BoneAnimFlagsTransform FlagsTransform { get; set; }
-
-        public byte BeginRotate { get; set; }
-
-        public byte BeginTranslate { get; set; }
-
-        public byte BeginBaseTranslate { get; set; }
-
-        [JsonConverter(typeof(StringEnumConverter))]
-        public BoneAnimFlagsCurve FlagsCurve { get; set; }
     }
 
     public struct BaseDataHelper
