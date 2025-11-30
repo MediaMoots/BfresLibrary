@@ -61,6 +61,9 @@ namespace BfresLibrary
                 loader.Seek(2); //padding
                 Offset = loader.ReadUInt16();
                 BufferIndex = (byte)loader.ReadUInt16();
+
+                /*BufferIndex = (byte)loader.ReadByte();
+                loader.ReadByte();*/
             }
             else
             {
@@ -84,6 +87,8 @@ namespace BfresLibrary
                 saver.Write(Offset);
                 saver.Write(BufferIndex);
                 saver.Seek(1);
+
+                /*saver.Write((byte)1);*/
             }
             else
             {
