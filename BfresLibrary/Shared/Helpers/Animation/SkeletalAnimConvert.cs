@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using BfresLibrary.TextConvert;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Linq;
 using Syroot.Maths;
-using BfresLibrary.TextConvert;
+using System;
+using System.Collections.Generic;
 
 namespace BfresLibrary.Helpers
 {
@@ -101,6 +97,11 @@ namespace BfresLibrary.Helpers
                 boneAnimConv.UseBaseTranslation = boneAnim.FlagsBase.HasFlag(BoneAnimFlagsBase.Translate);
                 boneAnimConv.UseBaseRotation = boneAnim.FlagsBase.HasFlag(BoneAnimFlagsBase.Rotate);
                 boneAnimConv.UseBaseScale = boneAnim.FlagsBase.HasFlag(BoneAnimFlagsBase.Scale);
+                boneAnimConv.FlagsTransform = boneAnim.FlagsTransform;
+                boneAnimConv.BeginBaseTranslate = boneAnim.BeginBaseTranslate;
+                boneAnimConv.BeginRotate = boneAnim.BeginRotate;
+                boneAnimConv.BeginTranslate = boneAnim.BeginTranslate;
+                boneAnimConv.FlagsCurve = boneAnim.FlagsCurve;
                 animConv.BoneAnims.Add(boneAnimConv);
 
                 foreach (var curve in boneAnim.Curves)
@@ -172,11 +173,12 @@ namespace BfresLibrary.Helpers
                 BoneAnim boneAnim = new BoneAnim();
                 anim.BoneAnims.Add(boneAnim);
 
-                //Always these indices
+                //Begin offsets depend on whether scale entries are present in the packed data
                 boneAnim.Name = boneAnimJson.Name;
-                boneAnim.BeginRotate = 3;
-                boneAnim.BeginTranslate = 6;
-                boneAnim.BeginBaseTranslate = 7;
+                var beginRotate = boneAnimJson.UseBaseScale ? (byte)3 : (byte)0;
+                boneAnim.BeginRotate = beginRotate;
+                boneAnim.BeginTranslate = (byte)(beginRotate + 3);
+                boneAnim.BeginBaseTranslate = (byte)(boneAnim.BeginTranslate + 1);
                 Vector4F rotation = boneAnimJson.BaseData.Rotate;
                 if (animJson.UseDegrees && animJson.FlagsRotate == SkeletalAnimFlagsRotate.EulerXYZ)
                 {
@@ -263,6 +265,18 @@ namespace BfresLibrary.Helpers
         public List<CurveAnimHelper> Curves { get; set; }
 
         public BaseDataHelper BaseData { get; set; }
+
+        [JsonConverter(typeof(StringEnumConverter))]
+        public BoneAnimFlagsTransform FlagsTransform { get; set; }
+
+        public byte BeginRotate { get; set; }
+
+        public byte BeginTranslate { get; set; }
+
+        public byte BeginBaseTranslate { get; set; }
+
+        [JsonConverter(typeof(StringEnumConverter))]
+        public BoneAnimFlagsCurve FlagsCurve;
     }
 
     public struct BaseDataHelper
