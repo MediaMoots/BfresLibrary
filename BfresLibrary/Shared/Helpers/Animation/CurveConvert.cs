@@ -239,13 +239,19 @@ namespace BfresLibrary
                 curve.Delta = lastKey - firstKey;
             }
 
+            float minQuantized = float.MaxValue;
+            float maxQuantized = float.MinValue;
+
             for (int i = 0; i < keys.Count; i++)
             {
                 curve.Keys[i, 0] -= curve.Offset;
 
+                int elementsToCheck = 1;
+
                 //Apply scale for cubic and linear curves only
                 if (curve.CurveType == AnimCurveType.Cubic)
                 {
+                    elementsToCheck = 4;
                     if (curve.Scale != 0)
                     {
                         curve.Keys[i, 0] /= curve.Scale;
@@ -256,11 +262,46 @@ namespace BfresLibrary
                 }
                 else if (curve.CurveType == AnimCurveType.Linear)
                 {
+                    elementsToCheck = 2;
                     if (curve.Scale != 0)
                     {
                         curve.Keys[i, 0] /= curve.Scale;
                         curve.Keys[i, 1] /= curve.Scale;
                     }
+                }
+
+                // Track min/max values to detect SByte overflow
+                for (int k = 0; k < elementsToCheck; k++)
+                {
+                    float val = curve.Keys[i, k];
+                    if (val < minQuantized) minQuantized = val;
+                    if (val > maxQuantized) maxQuantized = val;
+                }
+            }
+
+            // Check if the calculated values fit into SByte (-128 to 127)
+            // We add a small buffer (0.5) to account for float rounding errors before casting
+            if (curve.KeyType == AnimCurveKeyType.SByte)
+            {
+                if (minQuantized < -128.5f || maxQuantized > 127.5f)
+                {
+                    // SByte Overflow detected! Upgrade to Int16.
+                    // Console.WriteLine($"[Fix] Upgrading {target} curve from SByte to Int16 due to range [{minQuantized} to {maxQuantized}]");
+                    curve.KeyType = AnimCurveKeyType.Int16;
+                }
+            }
+
+            // Optional: Check if it fits into Int16 (-32768 to 32767)
+            // If not, you might need to upgrade to Single, though Scale/Offset usually prevents this for Int16.
+            if (curve.KeyType == AnimCurveKeyType.Int16)
+            {
+                if (minQuantized < -32768.5f || maxQuantized > 32767.5f)
+                {
+                    // Int16 Overflow detected! Upgrade to Float (Single)
+                    curve.KeyType = AnimCurveKeyType.Single;
+                    // Note: If upgrading to Single, Offset and Scale usually become 0 and 1,
+                    // but dealing with that requires undoing the math above.
+                    // Usually Int16 is sufficient for this file format.
                 }
             }
 
