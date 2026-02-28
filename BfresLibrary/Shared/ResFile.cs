@@ -665,18 +665,41 @@ namespace BfresLibrary
 
             foreach (var anim in MatVisibilityAnims.Values)
             {
-                int curveIndex = 0;
                 int curveConstantIndex = 0;
+                int absoluteCurveIndex = 0;
                 if (calculateBakeSizes)
                     anim.BakedSize = 0;
                 foreach (var subAnim in anim.MaterialAnimDataList)
                 {
-                    if (subAnim.Curves.Count > 0)
-                        subAnim.VisualCurveIndex = 0;
+                    // Find the index of the first visibility (StepBool) curve
+                    // within this material's local curves array.
+                    // VisualCurveIndex must point to the StepBool curve, not always 0,
+                    // because other curve types (e.g. Cubic shader params) may precede it.
+                    int visCurveIdx = -1;
+                    for (int i = 0; i < subAnim.Curves.Count; i++)
+                    {
+                        if (subAnim.Curves[i].CurveType == AnimCurveType.StepBool)
+                        {
+                            visCurveIdx = i;
+                            break;
+                        }
+                    }
 
-                    if (subAnim.Curves.Count > 0)
-                        subAnim.VisualConstantIndex = curveIndex;
-                    curveIndex += subAnim.Curves.Count;
+                    if (visCurveIdx >= 0)
+                    {
+                        subAnim.VisualCurveIndex = visCurveIdx;
+                        // VisualConstantIndex is the absolute output buffer index for the
+                        // visibility result. It equals the absolute starting curve index
+                        // of this material plus the local visibility curve index.
+                        subAnim.VisualConstantIndex = absoluteCurveIndex + visCurveIdx;
+                    }
+                    else if (subAnim.Curves.Count > 0)
+                    {
+                        // No StepBool curve found but curves exist - keep default (-1 / 0xFFFF)
+                        // to tell the game there is no visibility curve to evaluate.
+                    }
+
+                    absoluteCurveIndex += subAnim.Curves.Count;
 
                     if (subAnim.Constants != null && subAnim.Constants.Count > 0)
                     {

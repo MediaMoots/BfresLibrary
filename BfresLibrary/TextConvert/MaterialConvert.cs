@@ -144,13 +144,11 @@ namespace BfresLibrary.TextConvert
                 }
             }
 
-            JsonConvert.DefaultSettings = () =>
-            {
-                var settings = new JsonSerializerSettings();
-                return settings;
-            };
+            var settings = new JsonSerializerSettings();
+            settings.Converters.Add(new TexSrtConverter());
+            settings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
 
-            return JsonConvert.SerializeObject(matConv, Formatting.Indented);
+            return JsonConvert.SerializeObject(matConv, Formatting.Indented, settings);
         }
 
         private static MeshMetaInfo CreateMeshInfo(Shape shape, VertexBuffer vertexBuffer)
@@ -177,14 +175,10 @@ namespace BfresLibrary.TextConvert
 
         public static List<MeshMetaInfo> FromJson(Material mat, string json)
         {
-            JsonConvert.DefaultSettings = () =>
-            {
-                var settings = new JsonSerializerSettings();
-                settings.Converters.Add(new TexSrtConverter());
-                return settings;
-            };
+            var settings = new JsonSerializerSettings();
+            settings.Converters.Add(new TexSrtConverter());
 
-            var matJson = JsonConvert.DeserializeObject<MaterialStruct>(json);
+            var matJson = JsonConvert.DeserializeObject<MaterialStruct>(json, settings);
             mat.Name = matJson.Name;
             mat.Visible = matJson.Visible;
             mat.ShaderAssign = ConvertShaderAssign(matJson.ShaderAssign);
@@ -242,10 +236,8 @@ namespace BfresLibrary.TextConvert
                         value = ((JObject)param.Value).ToObject<Srt3D>();
                         break;
                     case ShaderParamType.TexSrt:
-                        value = ((JObject)param.Value).ToObject<TexSrt>();
-                        break;
                     case ShaderParamType.TexSrtEx:
-                        value = ((JObject)param.Value).ToObject<TexSrt>();
+                        value = ParseTexSrt((JObject)param.Value);
                         break;
                     case ShaderParamType.Float2:
                     case ShaderParamType.Float2x2:
@@ -333,66 +325,67 @@ namespace BfresLibrary.TextConvert
             return shaderAssign;
         }
 
-        public class TexSrtConverter : JsonConverter<TexSrt>
+        private static TexSrt ParseTexSrt(JObject jObject)
         {
-            public override void WriteJson(JsonWriter writer, TexSrt texSrt, JsonSerializer serializer)
+            Vector2F ParseTuple(string input)
             {
+                var parts = input.Split(';');
+                if (parts.Length != 2) return Vector2F.One;
+
+                return new Vector2F(
+                    float.Parse(parts[0], CultureInfo.InvariantCulture),
+                    float.Parse(parts[1], CultureInfo.InvariantCulture));
+            }
+
+            int mode = 0;
+            float rotation = 0;
+            Vector2F scaling = Vector2F.One;
+            Vector2F translation = Vector2F.Zero;
+
+            if (jObject.ContainsKey("Mode"))
+                mode = jObject["Mode"].Value<int>();
+            if (jObject.ContainsKey("Scaling"))
+                scaling = ParseTuple(jObject["Scaling"].Value<string>());
+            if (jObject.ContainsKey("Rotation"))
+                rotation = jObject["Rotation"].Value<float>();
+            if (jObject.ContainsKey("Translation"))
+                translation = ParseTuple(jObject["Translation"].Value<string>());
+
+            return new TexSrt()
+            {
+                Mode = (TexSrtMode)mode,
+                Rotation = rotation,
+                Scaling = scaling,
+                Translation = translation,
+            };
+        }
+
+        public class TexSrtConverter : JsonConverter
+        {
+            public override bool CanConvert(Type objectType)
+            {
+                return objectType == typeof(TexSrt);
+            }
+
+            public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+            {
+                var texSrt = (TexSrt)value;
                 writer.WriteStartObject();
                 writer.WritePropertyName("Mode");
-                serializer.Serialize(writer, texSrt.Mode);
-                writer.WriteEndObject();
-
-                writer.WriteStartObject();
+                writer.WriteValue((int)texSrt.Mode);
                 writer.WritePropertyName("Scaling");
-                serializer.Serialize(writer, new float[2] { texSrt.Scaling.X, texSrt.Scaling.Y });
-                writer.WriteEndObject();
-
-                writer.WriteStartObject();
+                writer.WriteValue($"{texSrt.Scaling.X.ToString(CultureInfo.InvariantCulture)};{texSrt.Scaling.Y.ToString(CultureInfo.InvariantCulture)}");
                 writer.WritePropertyName("Rotation");
-                serializer.Serialize(writer, texSrt.Rotation);
-                writer.WriteEndObject();
-
-                writer.WriteStartObject();
+                writer.WriteValue(texSrt.Rotation);
                 writer.WritePropertyName("Translation");
-                serializer.Serialize(writer, new float[2] { texSrt.Translation.X, texSrt.Translation.Y });
+                writer.WriteValue($"{texSrt.Translation.X.ToString(CultureInfo.InvariantCulture)};{texSrt.Translation.Y.ToString(CultureInfo.InvariantCulture)}");
                 writer.WriteEndObject();
             }
 
-            public override TexSrt ReadJson(JsonReader reader, Type objectType, TexSrt existingValue, bool hasExistingValue, JsonSerializer serializer)
+            public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
             {
                 var jObject = JObject.Load(reader);
-
-                Vector2F ParseTuple(string input)
-                {
-                    var parts = input.Split(';');
-                    if (parts.Length != 2) return Vector2F.One;
-
-                    return new Vector2F(
-                        float.Parse(parts[0], new CultureInfo("en-US")),
-                        float.Parse(parts[1], new CultureInfo("en-US")));
-                }
-
-                int mode = 0;
-                float rotation = 0;
-                Vector2F scaling = Vector2F.One;
-                Vector2F translation = Vector2F.Zero;
-
-                if (jObject.ContainsKey("Mode   "))
-                    mode = jObject["Mode"].Value<int>();
-                if (jObject.ContainsKey("Scaling"))
-                    scaling = ParseTuple(jObject["Scaling"].Value<string>());
-                if (jObject.ContainsKey("Rotation"))
-                    rotation = jObject["Rotation"].Value<float>();
-                if (jObject.ContainsKey("Translation"))
-                    translation = ParseTuple(jObject["Translation"].Value<string>());
-
-                return new TexSrt()
-                {
-                    Mode = (TexSrtMode)mode,
-                    Rotation = rotation,
-                    Scaling = scaling,
-                    Translation = translation,
-                };
+                return ParseTexSrt(jObject);
             }
         }
     }

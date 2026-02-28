@@ -30,7 +30,16 @@ namespace BfresLibrary.TextConvert
             using (new PushValue<bool>(true, () => CannotWrite, val => CannotWrite = val))
             using (new PushValue<Formatting>(Formatting.None, () => writer.Formatting, val => writer.Formatting = val))
             {
-                serializer.Serialize(writer, value);
+                // Check for TexSrt and use its converter directly since boxed structs don't trigger converters
+                if (value is TexSrt texSrt)
+                {
+                    var converter = new MaterialConvert.TexSrtConverter();
+                    converter.WriteJson(writer, texSrt, serializer);
+                }
+                else
+                {
+                    serializer.Serialize(writer, value);
+                }
             }
         }
     }
