@@ -4,6 +4,7 @@ using Newtonsoft.Json.Converters;
 using Syroot.Maths;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace BfresLibrary.Helpers
 {
@@ -83,7 +84,7 @@ namespace BfresLibrary.Helpers
                         rotation.X * CurveAnimHelper.Rad2Deg,
                         rotation.Y * CurveAnimHelper.Rad2Deg,
                         rotation.Z * CurveAnimHelper.Rad2Deg,
-                        1.0f);
+                        rotation.W);
                 }
 
                 boneAnimConv.BaseData = new BaseDataHelper()
