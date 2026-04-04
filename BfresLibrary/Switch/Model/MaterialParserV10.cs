@@ -55,9 +55,22 @@ namespace BfresLibrary.Switch
                     attributeIndices.Add((sbyte)info.AttribAssigns.IndexOf(sampler));
                 }
 
-                int choiceIdx = 0;
+                int boolIdx = 0;
+                int stringIdx = 0;
 
                 List<bool> toggles = new List<bool>();
+                // First pass: collect booleans and strings separately
+                foreach (var op in mat.ShaderAssign.ShaderOptions.Values)
+                {
+                    if (op == "<Default Value>")
+                        continue;
+
+                    if (op == "True") toggles.Add(true);
+                    else if (op == "False") toggles.Add(false);
+                    else info.OptionValues.Add(op);
+                }
+                // Second pass: assign correct indices
+                // Choices are laid out as [all booleans][all strings]
                 foreach (var op in mat.ShaderAssign.ShaderOptions.Values)
                 {
                     if (op == "<Default Value>")
@@ -66,12 +79,16 @@ namespace BfresLibrary.Switch
                         continue;
                     }
 
-                    if (op == "True") toggles.Add(true);
-                    else if (op == "False") toggles.Add(false);
-                    else info.OptionValues.Add(op);
-
-                    optionChoiceIndices.Add((short)choiceIdx);
-                    choiceIdx++;
+                    if (op == "True" || op == "False")
+                    {
+                        optionChoiceIndices.Add((short)boolIdx);
+                        boolIdx++;
+                    }
+                    else
+                    {
+                        optionChoiceIndices.Add((short)(toggles.Count + stringIdx));
+                        stringIdx++;
+                    }
                 }
 
                 info.OptionToggles = toggles.ToArray();
@@ -90,6 +107,12 @@ namespace BfresLibrary.Switch
                     info.ShaderAssign.AttributeAssign.Add(att.Key, att.Value);
                 foreach (var op in mat.ShaderAssign.ShaderOptions)
                     info.ShaderAssign.Options.Add(op.Key, op.Value);
+
+                //Populate RenderInfos and ShaderParameters dicts for save
+                foreach (var ri in mat.RenderInfos)
+                    info.ShaderAssign.RenderInfos.Add(ri.Key, ri.Key);
+                foreach (var sp in mat.ShaderParams)
+                    info.ShaderAssign.ShaderParameters.Add(sp.Key, sp.Key);
             }
 
             List<RenderInfo> renderInfoOrdered = new List<RenderInfo>();
@@ -163,7 +186,7 @@ namespace BfresLibrary.Switch
                     ShadingModelName = info.ShaderAssign.ShadingModelName,
                 };
                 mat.ShaderParamData = loader.LoadCustom(() => loader.ReadBytes(info.ShaderAssign.ShaderParamSize), (uint)SourceParamOffset);
-                mat.ParamIndices = loader.LoadCustom(() => loader.ReadInt32s(info.ShaderAssign.ShaderParameters.Count), (uint)SourceParamIndices);
+                mat.ParamIndices = loader.LoadCustom(() => loader.ReadInt32s(info.ShaderAssign.ParamCount), (uint)SourceParamIndices);
 
                 ReadRenderInfo(loader, info, mat, renderInfoCounterTable, renderInfoDataOffsets, renderInfoDataTable);
                 ReadShaderParams(loader, info, mat);
@@ -179,7 +202,8 @@ namespace BfresLibrary.Switch
         static void ReadRenderInfo(ResFileLoader loader, ShaderInfo info, Material mat,
             long renderInfoCounterTable, long renderInfoDataOffsets, long renderInfoDataTable)
         {
-            for (int i = 0; i < info.ShaderAssign.RenderInfos.Count; i++)
+            var renderInfoCount = info.ShaderAssign.RenderInfoCount;
+            for (int i = 0; i < renderInfoCount; i++)
             {
                 RenderInfo renderInfo = new RenderInfo();
 
@@ -200,13 +224,17 @@ namespace BfresLibrary.Switch
                 loader.Seek((int)renderInfoDataTable + dataOffset, SeekOrigin.Begin);
                 renderInfo.ReadData(loader, renderInfo.Type, count);
 
+                if (string.IsNullOrEmpty(renderInfo.Name) || mat.RenderInfos.ContainsKey(renderInfo.Name))
+                    continue;
+
                 mat.RenderInfos.Add(renderInfo.Name, renderInfo);
             }
         }
 
         static void ReadShaderParams(ResFileLoader loader, ShaderInfo info, Material mat)
         {
-            for (int i = 0; i < info.ShaderAssign.ShaderParameters.Count; i++)
+            var paramCount = info.ShaderAssign.ParamCount;
+            for (int i = 0; i < paramCount; i++)
             {
                 ShaderParam param = new ShaderParam();
 
@@ -216,6 +244,9 @@ namespace BfresLibrary.Switch
                 param.DataOffset = loader.ReadUInt16(); //padding
                 param.Type = (ShaderParamType)loader.ReadUInt16(); //type
                 var pad2 = loader.ReadUInt32(); //padding
+
+                if (string.IsNullOrEmpty(param.Name) || mat.ShaderParams.ContainsKey(param.Name))
+                    continue;
 
                 mat.ShaderParams.Add(param.Name, param);
             }
@@ -229,6 +260,9 @@ namespace BfresLibrary.Switch
                 var value = idx == -1 ? "<Default Value>" : info.AttribAssigns[idx];
                 var key = info.ShaderAssign.AttributeAssign.GetKey(i);
 
+                if (string.IsNullOrEmpty(key) || mat.ShaderAssign.AttribAssigns.ContainsKey(key))
+                    continue;
+
                 mat.ShaderAssign.AttribAssigns.Add(key, value);
             }
         }
@@ -240,6 +274,9 @@ namespace BfresLibrary.Switch
                 int idx = info.SamplerAssignIndices?.Length > 0 ? info.SamplerAssignIndices[i] : i;
                 var value = idx == -1 ? "<Default Value>" : info.SamplerAssigns[idx];
                 var key = info.ShaderAssign.SamplerAssign.GetKey(i);
+
+                if (string.IsNullOrEmpty(key) || mat.ShaderAssign.SamplerAssigns.ContainsKey(key))
+                    continue;
 
                 mat.ShaderAssign.SamplerAssigns.Add(key, value);
             }
@@ -259,6 +296,9 @@ namespace BfresLibrary.Switch
                 int idx = info.OptionIndices?.Length > 0 ? info.OptionIndices[i] : i;
                 var value = idx == -1 ? "<Default Value>" : choices[idx];
                 var key = info.ShaderAssign.Options.GetKey(i);
+
+                if (string.IsNullOrEmpty(key) || mat.ShaderAssign.ShaderOptions.ContainsKey(key))
+                    continue;
 
                 mat.ShaderAssign.ShaderOptions.Add(key, value);
             }
@@ -373,8 +413,8 @@ namespace BfresLibrary.Switch
             saver.SaveCustom(mat.SamplerSlotArray, () => saver.Write(mat.SamplerSlotArray));
             saver.SaveCustom(mat.TextureSlotArray, () => saver.Write(mat.TextureSlotArray));
             saver.Write((ushort)saver.CurrentIndex);
-            saver.Write((byte)mat.TextureRefs.Count);
             saver.Write((byte)mat.Samplers.Count);
+            saver.Write((byte)mat.TextureRefs.Count);
             saver.Write((ushort)0); //numShaderParamVolatile?
             saver.Write((ushort)mat.UserData.Count);
             saver.Write((ushort)renderInfoDataSize);
@@ -592,7 +632,8 @@ namespace BfresLibrary.Switch
                 saver.SaveString(ShadingModelName);
                 saver.SaveCustom(new long[ParentMaterial.RenderInfos.Count], () =>
                 {
-                    ((ResFileSwitchSaver)saver).SaveRelocateEntryToSection(saver.Position, 1, (uint)ParentMaterial.RenderInfos.Count, 1, ResFileSwitchSaver.Section1, "Render Param Info V10");
+                    if (ParentMaterial.RenderInfos.Count > 0)
+                        ((ResFileSwitchSaver)saver).SaveRelocateEntryToSection(saver.Position, 1, (uint)ParentMaterial.RenderInfos.Count, 1, ResFileSwitchSaver.Section1, "Render Param Info V10");
 
                     foreach (var renderInfo in ParentMaterial.RenderInfos.Values)
                     {
@@ -604,7 +645,8 @@ namespace BfresLibrary.Switch
                 saver.SaveDict(ParentMaterial.RenderInfos);
                 saver.SaveCustom(new long[ParentMaterial.ShaderParams.Count], () =>
                 {
-                    ((ResFileSwitchSaver)saver).SaveRelocateEntryToSection(saver.Position, 2, (uint)ParentMaterial.ShaderParams.Count, 1, ResFileSwitchSaver.Section1, "Shader Param Info V10");
+                    if (ParentMaterial.ShaderParams.Count > 0)
+                        ((ResFileSwitchSaver)saver).SaveRelocateEntryToSection(saver.Position, 2, (uint)ParentMaterial.ShaderParams.Count, 1, ResFileSwitchSaver.Section1, "Shader Param Info V10");
 
                     foreach (var param in ParentMaterial.ShaderParams.Values)
                     {
@@ -640,7 +682,6 @@ namespace BfresLibrary.Switch
                 foreach (var p in ParentMaterial.ShaderParams.Values)
                 {
                     hash += p.Name.GetHashCode();
-                    hash += p.DataOffset.GetHashCode();
                     hash += p.Type.GetHashCode();
                 }
                 foreach (var op in Options)
@@ -651,6 +692,44 @@ namespace BfresLibrary.Switch
                     hash += samp.GetHashCode();
 
                 return hash;
+            }
+
+            /// <summary>
+            /// Deep equality check comparing all dict entries (keys and values) to avoid hash collision issues.
+            /// </summary>
+            public bool DeepEquals(ShaderAssignV10 other)
+            {
+                if (other == null) return false;
+                if (ReferenceEquals(this, other)) return true;
+
+                if (ShaderArchiveName != other.ShaderArchiveName) return false;
+                if (ShadingModelName != other.ShadingModelName) return false;
+                if (ParamCount != other.ParamCount) return false;
+                if (RenderInfoCount != other.RenderInfoCount) return false;
+                if (Options.Count != other.Options.Count) return false;
+                if (AttributeAssign.Count != other.AttributeAssign.Count) return false;
+                if (SamplerAssign.Count != other.SamplerAssign.Count) return false;
+
+                // Compare Options dict entries (order and values)
+                for (int i = 0; i < Options.Count; i++)
+                {
+                    if (Options.GetKey(i) != other.Options.GetKey(i)) return false;
+                    if (Options[i].String != other.Options[i].String) return false;
+                }
+                // Compare AttributeAssign dict entries
+                for (int i = 0; i < AttributeAssign.Count; i++)
+                {
+                    if (AttributeAssign.GetKey(i) != other.AttributeAssign.GetKey(i)) return false;
+                    if (AttributeAssign[i].String != other.AttributeAssign[i].String) return false;
+                }
+                // Compare SamplerAssign dict entries
+                for (int i = 0; i < SamplerAssign.Count; i++)
+                {
+                    if (SamplerAssign.GetKey(i) != other.SamplerAssign.GetKey(i)) return false;
+                    if (SamplerAssign[i].String != other.SamplerAssign[i].String) return false;
+                }
+
+                return true;
             }
         }
     }

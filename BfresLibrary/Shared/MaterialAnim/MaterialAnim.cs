@@ -355,6 +355,32 @@ namespace BfresLibrary
             if (MaterialAnimDataList == null)
                 MaterialAnimDataList = new List<MaterialAnimData>();
 
+            // Recompute global curve indices for FMAA before saving.
+            // ShaderParamCurveIndex and TexturePatternCurveIndex are cumulative global
+            // indices across all MaterialAnimData entries in the FMAA. They must be
+            // recomputed because FromJson and FromStruct may leave them incorrect.
+            if (signature == "FMAA")
+            {
+                int globalCurveIndex = 0;
+                foreach (var matAnimData in MaterialAnimDataList)
+                {
+                    // Count texture pattern curves (those with a valid CurveIndex)
+                    int texPatternCurveCount = 0;
+                    if (matAnimData.PatternAnimInfos != null)
+                    {
+                        foreach (var p in matAnimData.PatternAnimInfos)
+                            if (p.CurveIndex >= 0) texPatternCurveCount++;
+                    }
+
+                    // Texture pattern curves come first in the per-entry curve list
+                    matAnimData.TexturePatternCurveIndex = globalCurveIndex;
+                    // Shader param curves follow texture pattern curves
+                    matAnimData.ShaderParamCurveIndex = globalCurveIndex + texPatternCurveCount;
+
+                    globalCurveIndex += matAnimData.Curves?.Count ?? 0;
+                }
+            }
+
             saver.WriteSignature(signature);
             if (signature == "FMAA")
             {
