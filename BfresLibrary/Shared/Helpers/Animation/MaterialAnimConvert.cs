@@ -57,6 +57,7 @@ namespace BfresLibrary.Helpers
                 matAnim.Name = matAnimJson.Name;
                 matAnim.ParamAnimInfos = new List<ParamAnimInfo>();
                 matAnim.PatternAnimInfos = new List<PatternAnimInfo>();
+                matAnim.ShaderParamCurveIndex = 0;
                 List<ushort> texturePatternBase = new List<ushort>();
 
                 foreach (var samplerInfo in matAnimJson.Samplers)
@@ -95,6 +96,11 @@ namespace BfresLibrary.Helpers
                     info.IntCurveCount = 0;
                     info.Name = paramInfo.Name;
                     matAnim.ParamAnimInfos.Add(info);
+
+                    Console.WriteLine($"Param {info.Name} constantIndex {constantIndex} ConstantCount {info.ConstantCount}");
+
+                    if (paramInfo.Curves.Count > 0)
+                        matAnim.VisualConstantIndex = 0;
 
                     foreach (var curveJson in paramInfo.Curves)
                     {
