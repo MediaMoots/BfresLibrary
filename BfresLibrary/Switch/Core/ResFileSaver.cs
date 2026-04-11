@@ -1051,6 +1051,15 @@ namespace BfresLibrary.Switch.Core
 
         private void WriteMaterialAnimations(MaterialAnim matanim)
         {
+            // Auto-fix: ensure BindIndices exists when MaterialAnimDataList has entries.
+            // NULL BindIndices with perMat > 0 causes a NULL deref crash in the game's unbind path.
+            if (matanim.MaterialAnimDataList.Count > 0 && (matanim.BindIndices == null || matanim.BindIndices.Length == 0))
+            {
+                matanim.BindIndices = new ushort[matanim.MaterialAnimDataList.Count];
+                for (int i = 0; i < matanim.BindIndices.Length; i++)
+                    matanim.BindIndices[i] = ushort.MaxValue; // 0xFFFF = unbound
+            }
+
             if (matanim.BindIndices != null && matanim.BindIndices.Length > 0)
             {
                 WriteOffset(matanim.PosBindIndicesOffset);
