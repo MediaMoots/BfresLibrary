@@ -84,6 +84,7 @@ namespace BfresLibrary.Switch
                         if (assign.GetHashCode() == mat.ShaderInfoV10.ShaderAssign.GetHashCode())
                             mat.ShaderInfoV10.ShaderAssign = assign;
                     }
+                    MaterialParserV10.RebuildShaderAssignTables(mat);
                 }
             }
 

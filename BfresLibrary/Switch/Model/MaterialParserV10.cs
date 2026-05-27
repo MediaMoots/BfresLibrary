@@ -27,69 +27,14 @@ namespace BfresLibrary.Switch
 
             if (mat.ShaderAssign != null)
             {
-                List<sbyte> samplerIndices = new List<sbyte>();
-                List<sbyte> attributeIndices = new List<sbyte>();
-                List<short> optionChoiceIndices = new List<short>();
-
-                //Values
-                foreach (var sampler in mat.ShaderAssign.SamplerAssigns.Values)
-                {
-                    if (sampler == "<Default Value>")
-                    {
-                        samplerIndices.Add(-1);
-                        continue;
-                    }
-
-                    info.SamplerAssigns.Add(sampler);
-                    samplerIndices.Add((sbyte)info.SamplerAssigns.IndexOf(sampler));
-                }
-
-                foreach (var sampler in mat.ShaderAssign.AttribAssigns.Values)
-                {
-                    if (sampler == "<Default Value>")
-                    {
-                        attributeIndices.Add(-1);
-                        continue;
-                    }
-                    info.AttribAssigns.Add(sampler);
-                    attributeIndices.Add((sbyte)info.AttribAssigns.IndexOf(sampler));
-                }
-
-                int choiceIdx = 0;
-
-                List<bool> toggles = new List<bool>();
-                foreach (var op in mat.ShaderAssign.ShaderOptions.Values)
-                {
-                    if (op == "<Default Value>")
-                    {
-                        optionChoiceIndices.Add(-1);
-                        continue;
-                    }
-
-                    if (op == "True") toggles.Add(true);
-                    else if (op == "False") toggles.Add(false);
-                    else info.OptionValues.Add(op);
-
-                    optionChoiceIndices.Add((short)choiceIdx);
-                    choiceIdx++;
-                }
-
-                info.OptionToggles = toggles.ToArray();
-
-                if (samplerIndices.Any(x => x == -1))
-                    info.SamplerAssignIndices = samplerIndices.ToArray();
-                if (attributeIndices.Any(x => x == -1))
-                    info.AttributeAssignIndices = attributeIndices.ToArray();
-
-                info.OptionIndices = optionChoiceIndices.ToArray();
-
-                //Dicts
                 foreach (var sampler in mat.ShaderAssign.SamplerAssigns)
                     info.ShaderAssign.SamplerAssign.Add(sampler.Key, sampler.Value);
                 foreach (var att in mat.ShaderAssign.AttribAssigns)
                     info.ShaderAssign.AttributeAssign.Add(att.Key, att.Value);
                 foreach (var op in mat.ShaderAssign.ShaderOptions)
                     info.ShaderAssign.Options.Add(op.Key, op.Value);
+
+                RebuildShaderAssignTables(mat);
             }
 
             List<RenderInfo> renderInfoOrdered = new List<RenderInfo>();
@@ -102,6 +47,104 @@ namespace BfresLibrary.Switch
                 mat.RenderInfos.Add(renderInfo.Name, renderInfo);
 
             mat.ShaderInfoV10 = info;
+        }
+
+        public static void RebuildShaderAssignTables(Material mat)
+        {
+            var info = mat.ShaderInfoV10;
+            if (info?.ShaderAssign == null || mat.ShaderAssign == null)
+                return;
+
+            info.SamplerAssigns = new List<string>();
+            info.AttribAssigns = new List<string>();
+            info.OptionValues = new List<string>();
+
+            info.SamplerAssignIndices = BuildStringAssignTable(
+                info.ShaderAssign.SamplerAssign,
+                mat.ShaderAssign.SamplerAssigns,
+                info.SamplerAssigns);
+            info.AttributeAssignIndices = BuildStringAssignTable(
+                info.ShaderAssign.AttributeAssign,
+                mat.ShaderAssign.AttribAssigns,
+                info.AttribAssigns);
+            info.OptionIndices = BuildOptionTable(
+                info.ShaderAssign.Options,
+                mat.ShaderAssign.ShaderOptions,
+                info.OptionValues,
+                out var toggles);
+            info.OptionToggles = toggles;
+        }
+
+        private static sbyte[] BuildStringAssignTable(
+            ResDict<ResString> savedAssign,
+            ResDict<ResString> sourceAssign,
+            IList<string> values)
+        {
+            var indices = new List<sbyte>();
+
+            foreach (var assign in savedAssign)
+            {
+                var value = sourceAssign[assign.Key];
+                if (value == "<Default Value>")
+                {
+                    indices.Add(-1);
+                    continue;
+                }
+
+                values.Add(value);
+                indices.Add((sbyte)(values.Count - 1));
+            }
+
+            return indices.ToArray();
+        }
+
+        private static short[] BuildOptionTable(
+            ResDict<ResString> savedOptions,
+            ResDict<ResString> sourceOptions,
+            IList<string> values,
+            out bool[] toggles)
+        {
+            var indices = new short[savedOptions.Count];
+            var toggleValues = new List<bool>();
+            short stringChoiceBase = 0;
+
+            for (int i = 0; i < savedOptions.Count; i++)
+            {
+                var key = savedOptions.GetKey(i);
+                var value = sourceOptions[key];
+                if (value == "<Default Value>")
+                {
+                    indices[i] = -1;
+                    continue;
+                }
+
+                if (value == "True")
+                {
+                    indices[i] = stringChoiceBase++;
+                    toggleValues.Add(true);
+                }
+                else if (value == "False")
+                {
+                    indices[i] = stringChoiceBase++;
+                    toggleValues.Add(false);
+                }
+            }
+
+            short stringChoiceIdx = stringChoiceBase;
+
+            for (int i = 0; i < savedOptions.Count; i++)
+            {
+                var key = savedOptions.GetKey(i);
+                var value = sourceOptions[key];
+                if (value == "<Default Value>" || value == "True" || value == "False")
+                    continue;
+
+                values.Add(value);
+                indices[i] = stringChoiceIdx++;
+            }
+
+            toggles = toggleValues.ToArray();
+            return indices;
         }
 
         public static void Load(ResFileSwitchLoader loader, Material mat)
