@@ -301,8 +301,9 @@ namespace BfresLibrary.Switch.Core
         [DebuggerStepThrough]
         internal void SaveRelocateEntryToSection(long pos, uint OffsetCount, uint StructCount, uint PaddingCount, int SectionNumber, string Hint)
         {
-            if (StructCount <= 0)
-                throw new Exception("Invalid struct count. Should be greater than 0! " + StructCount);
+            // Empty optional arrays have no pointers for the relocation table.
+            if (StructCount == 0)
+                return;
 
 
             if (OffsetCount > 255)
