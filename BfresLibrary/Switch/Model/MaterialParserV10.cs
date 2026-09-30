@@ -33,8 +33,6 @@ namespace BfresLibrary.Switch
                     info.ShaderAssign.AttributeAssign.Add(att.Key, att.Value);
                 foreach (var op in mat.ShaderAssign.ShaderOptions)
                     info.ShaderAssign.Options.Add(op.Key, op.Value);
-
-                RebuildShaderAssignTables(mat);
             }
 
             List<RenderInfo> renderInfoOrdered = new List<RenderInfo>();
@@ -47,6 +45,7 @@ namespace BfresLibrary.Switch
                 mat.RenderInfos.Add(renderInfo.Name, renderInfo);
 
             mat.ShaderInfoV10 = info;
+            RebuildShaderAssignTables(mat);
         }
 
         public static void RebuildShaderAssignTables(Material mat)
