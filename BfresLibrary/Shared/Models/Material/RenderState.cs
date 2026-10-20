@@ -564,6 +564,26 @@ namespace BfresLibrary
 
         // ---- METHODS ------------------------------------------------------------------------------------------------
 
+        /// <summary>
+        /// Creates a copy of the render state with independent GPU control values.
+        /// </summary>
+        /// <returns>A copy of the render state.</returns>
+        internal RenderState Copy()
+        {
+            RenderState copy = (RenderState)MemberwiseClone();
+            if (_alphaControl != null)
+                copy._alphaControl = new AlphaControl() { Value = _alphaControl.Value };
+            if (_blendControl != null)
+                copy._blendControl = new BlendControl() { Value = _blendControl.Value };
+            if (_polygonControl != null)
+                copy._polygonControl = new PolygonControl() { Value = _polygonControl.Value };
+            if (_colorControl != null)
+                copy._colorControl = new ColorControl() { Value = _colorControl.Value };
+            if (_depthControl != null)
+                copy._depthControl = new DepthControl() { Value = _depthControl.Value };
+            return copy;
+        }
+
         void IResData.Load(ResFileLoader loader)
         {
             _flags = loader.ReadUInt32();

@@ -13,6 +13,12 @@ namespace BfresLibrary.Switch
     {
         public static void PrepareSave(Material mat)
         {
+            // Finalize parameter offsets before comparing shared shader layouts.
+            mat.ShaderParamData = mat.WriteShaderParams(Syroot.BinaryData.ByteOrder.LittleEndian);
+            // Binding indices contain one entry per shader parameter, including unbound entries.
+            if (mat.ParamIndices == null || mat.ParamIndices.Length != mat.ShaderParams.Count)
+                mat.ParamIndices = Enumerable.Repeat(-1, mat.ShaderParams.Count).ToArray();
+
             var info = new ShaderInfo();
 
             info.ShaderAssign = new ShaderAssignV10();
@@ -331,7 +337,10 @@ namespace BfresLibrary.Switch
             //Adds alignment
             var alignment = 128;
             renderInfoDataSize += (-renderInfoDataSize % alignment + alignment) % alignment;
-            renderInfoDataSize = mat.RenderInfoSize;
+            renderInfoDataSize = Math.Max(renderInfoDataSize, mat.RenderInfoSize);
+            if (renderInfoDataSize > ushort.MaxValue)
+                throw new InvalidDataException($"Material '{mat.Name}' render-info data exceeds the v10 size field.");
+            mat.RenderInfoSize = renderInfoDataSize;
 
             saver.SaveRelocateEntryToSection(saver.Position, 12, 1, 0, ResFileSwitchSaver.Section1, "FMAT");
 
@@ -563,24 +572,35 @@ namespace BfresLibrary.Switch
 
             private void WriteIndices(ResFileSaver saver, short[] indices)
             {
-                for (short i = 0; i < indices.Length; i++)
-                {
-                    if (indices[i] != -1)
-                        saver.Write(i);
-                }
+                foreach (int index in BuildForwardIndices(Array.ConvertAll(indices, x => (int)x)))
+                    saver.Write(checked((short)index));
                 saver.Write(indices);
                 saver.Align(8);
             }
 
             private void WriteIndices(ResFileSaver saver, sbyte[] indices)
             {
-                for (sbyte i = 0; i < indices.Length; i++)
-                {
-                    if (indices[i] != -1)
-                        saver.Write(i);
-                }
+                foreach (int index in BuildForwardIndices(Array.ConvertAll(indices, x => (int)x)))
+                    saver.Write(checked((sbyte)index));
                 saver.Write(indices);
                 saver.Align(8);
+            }
+
+            private static int[] BuildForwardIndices(int[] reverse)
+            {
+                // Forward indices map compact values back to dictionary entries.
+                // Boolean options precede string options in the compact value table.
+                var forward = Enumerable.Repeat(-1, reverse.Count(x => x != -1)).ToArray();
+                for (int name = 0; name < reverse.Length; name++)
+                {
+                    int choice = reverse[name];
+                    if (choice == -1)
+                        continue;
+                    if (choice < 0 || choice >= forward.Length || forward[choice] != -1)
+                        throw new InvalidDataException("Shader assignment indices must form a compact, unique mapping.");
+                    forward[choice] = name;
+                }
+                return forward;
             }
         }
 
@@ -668,31 +688,75 @@ namespace BfresLibrary.Switch
                 saver.Write(0UL);//padding
             }
 
-            public override int GetHashCode()
+            internal bool HasSameLayout(ShaderAssignV10 other)
             {
-                int hash = 0;
-                hash += ShaderArchiveName.GetHashCode();
-                hash += ShadingModelName.GetHashCode();
+                // Shared reflection is positional; matching hashes or names alone is insufficient.
+                Material material = ParentMaterial;
+                Material otherMaterial = other.ParentMaterial;
 
-                foreach (var renderInfo in ParentMaterial.RenderInfos.Values)
-                {
-                    hash += renderInfo.Name.GetHashCode();
-                    hash += renderInfo.Type.GetHashCode();
-                }
-                foreach (var p in ParentMaterial.ShaderParams.Values)
-                {
-                    hash += p.Name.GetHashCode();
-                    hash += p.DataOffset.GetHashCode();
-                    hash += p.Type.GetHashCode();
-                }
-                foreach (var op in Options)
-                    hash += op.GetHashCode();
-                foreach (var att in AttributeAssign)
-                    hash += att.GetHashCode();
-                foreach (var samp in SamplerAssign)
-                    hash += samp.GetHashCode();
+                if (ShaderArchiveName != other.ShaderArchiveName)
+                    return false;
+                if (ShadingModelName != other.ShadingModelName)
+                    return false;
+                if (material.ShaderParamData.Length != otherMaterial.ShaderParamData.Length)
+                    return false;
 
-                return hash;
+                if (material.RenderInfos.Count != otherMaterial.RenderInfos.Count)
+                    return false;
+                for (int i = 0; i < material.RenderInfos.Count; i++)
+                {
+                    if (material.RenderInfos.GetKey(i) != otherMaterial.RenderInfos.GetKey(i))
+                        return false;
+
+                    var renderInfo = material.RenderInfos[i];
+                    var otherRenderInfo = otherMaterial.RenderInfos[i];
+                    if (renderInfo.Name != otherRenderInfo.Name)
+                        return false;
+                    if (renderInfo.Type != otherRenderInfo.Type)
+                        return false;
+                }
+
+                if (material.ShaderParams.Count != otherMaterial.ShaderParams.Count)
+                    return false;
+                for (int i = 0; i < material.ShaderParams.Count; i++)
+                {
+                    if (material.ShaderParams.GetKey(i) != otherMaterial.ShaderParams.GetKey(i))
+                        return false;
+
+                    var param = material.ShaderParams[i];
+                    var otherParam = otherMaterial.ShaderParams[i];
+                    if (param.Name != otherParam.Name)
+                        return false;
+                    if (param.Type != otherParam.Type)
+                        return false;
+                    if (param.DataOffset != otherParam.DataOffset)
+                        return false;
+                }
+
+                if (AttributeAssign.Count != other.AttributeAssign.Count)
+                    return false;
+                for (int i = 0; i < AttributeAssign.Count; i++)
+                {
+                    if (AttributeAssign.GetKey(i) != other.AttributeAssign.GetKey(i))
+                        return false;
+                }
+
+                if (SamplerAssign.Count != other.SamplerAssign.Count)
+                    return false;
+                for (int i = 0; i < SamplerAssign.Count; i++)
+                {
+                    if (SamplerAssign.GetKey(i) != other.SamplerAssign.GetKey(i))
+                        return false;
+                }
+
+                if (Options.Count != other.Options.Count)
+                    return false;
+                for (int i = 0; i < Options.Count; i++)
+                {
+                    if (Options.GetKey(i) != other.Options.GetKey(i))
+                        return false;
+                }
+                return true;
             }
         }
     }

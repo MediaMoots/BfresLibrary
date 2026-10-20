@@ -74,16 +74,15 @@ namespace BfresLibrary.Switch
                 foreach (var mat in model.Materials.Values)
                     MaterialParserV10.PrepareSave(mat);
 
-                //Get all the shader assigns
-                var list = model.Materials.Values.Select(x => x.ShaderInfoV10.ShaderAssign).Distinct();
-                //trim via hash
-                model.ShaderAssign = list.GroupBy(x => x.GetHashCode()).Select(g => g.First()).ToList();
-                //assign each material shader assign instance
-                foreach (var mat in model.Materials.Values) {
-                    foreach (var assign in model.ShaderAssign) {
-                        if (assign.GetHashCode() == mat.ShaderInfoV10.ShaderAssign.GetHashCode())
-                            mat.ShaderInfoV10.ShaderAssign = assign;
-                    }
+                model.ShaderAssign = new List<MaterialParserV10.ShaderAssignV10>();
+                foreach (var mat in model.Materials.Values)
+                {
+                    var candidate = mat.ShaderInfoV10.ShaderAssign;
+                    var shared = model.ShaderAssign.FirstOrDefault(x => x.HasSameLayout(candidate));
+                    if (shared == null)
+                        model.ShaderAssign.Add(candidate);
+                    else
+                        mat.ShaderInfoV10.ShaderAssign = shared;
                     MaterialParserV10.RebuildShaderAssignTables(mat);
                 }
             }

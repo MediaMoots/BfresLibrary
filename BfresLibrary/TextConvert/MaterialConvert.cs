@@ -256,7 +256,7 @@ namespace BfresLibrary.TextConvert
                     case ShaderParamType.Bool2:
                     case ShaderParamType.Bool3:
                     case ShaderParamType.Bool4:
-                        value = ((JArray)param.Value).ToObject<bool>();
+                        value = ((JArray)param.Value).ToObject<bool[]>();
                         break;
                     case ShaderParamType.Int2:
                     case ShaderParamType.Int3:

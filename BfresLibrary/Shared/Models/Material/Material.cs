@@ -144,6 +144,119 @@ namespace BfresLibrary
 
         // ---- METHODS (PUBLIC) ---------------------------------------------------------------------------------------
 
+        /// <summary>
+        /// Creates a copy of the material with independent editable values.
+        /// </summary>
+        /// <returns>A copy of the material.</returns>
+        /// <remarks>
+        /// Null parameter, render-info, and user-data values are preserved, not validated for saving.
+        /// Referenced textures remain shared. Shader serialization tables are rebuilt on save.
+        /// </remarks>
+        public Material Copy()
+        {
+            Material copy = (Material)MemberwiseClone();
+            copy.ShaderInfoV10 = null!; // Rebuilt by PrepareSave.
+            copy.ShaderAssign = new ShaderAssign()
+            {
+                ShaderArchiveName = ShaderAssign.ShaderArchiveName,
+                ShadingModelName = ShaderAssign.ShadingModelName,
+                Revision = ShaderAssign.Revision
+            };
+            CopyStrings(ShaderAssign.AttribAssigns, copy.ShaderAssign.AttribAssigns);
+            CopyStrings(ShaderAssign.SamplerAssigns, copy.ShaderAssign.SamplerAssigns);
+            CopyStrings(ShaderAssign.ShaderOptions, copy.ShaderAssign.ShaderOptions);
+
+            copy.ShaderParams = new ResDict<ShaderParam>();
+            foreach (var param in ShaderParams)
+                copy.ShaderParams.Add(param.Key, param.Value.Copy());
+            if (ShaderParamData != null)
+                copy.ShaderParamData = ShaderParamData.ToArray();
+            if (ParamIndices != null)
+                copy.ParamIndices = ParamIndices.ToArray();
+            if (TextureSlotArray != null)
+                copy.TextureSlotArray = TextureSlotArray.ToArray();
+            if (SamplerSlotArray != null)
+                copy.SamplerSlotArray = SamplerSlotArray.ToArray();
+            if (VolatileFlags != null)
+                copy.VolatileFlags = VolatileFlags.ToArray();
+            if (RenderState != null)
+                copy.RenderState = RenderState.Copy();
+
+            copy.TextureRefs = new List<TextureRef>();
+            foreach (var textureRef in TextureRefs)
+            {
+                copy.TextureRefs.Add(new TextureRef()
+                {
+                    Name = textureRef.Name,
+                    Texture = textureRef.Texture
+                });
+            }
+            copy.Samplers = new ResDict<Sampler>();
+            foreach (var sampler in Samplers)
+            {
+                copy.Samplers.Add(sampler.Key, new Sampler()
+                {
+                    Name = sampler.Value.Name,
+                    TexSampler = new GX2.TexSampler(sampler.Value.TexSampler.Values.ToArray())
+                });
+            }
+
+            copy.RenderInfos = new ResDict<RenderInfo>();
+            foreach (var item in RenderInfos)
+            {
+                var value = new RenderInfo()
+                {
+                    Name = item.Value.Name,
+                    Type = item.Value.Type,
+                    Data = item.Value.Data
+                };
+                if (value.Data is Array array)
+                    value.Data = array.Clone();
+                copy.RenderInfos.Add(item.Key, value);
+            }
+
+            copy.UserData = new ResDict<UserData>();
+            foreach (var item in UserData)
+            {
+                var value = new UserData() { Name = item.Value.Name };
+                object data = item.Value.GetData();
+                if (data is Array array)
+                    data = array.Clone();
+                switch (item.Value.Type)
+                {
+                    case UserDataType.Byte:
+                        value.SetValue((byte[])data);
+                        break;
+                    case UserDataType.Int32:
+                        value.SetValue((int[])data);
+                        break;
+                    case UserDataType.Single:
+                        value.SetValue((float[])data);
+                        break;
+                    case UserDataType.String:
+                        value.SetValue((string[])data);
+                        break;
+                    case UserDataType.WString:
+                        value.SetValue((string[])data, true);
+                        break;
+                }
+                copy.UserData.Add(item.Key, value);
+            }
+
+            if (ShaderLocationMapping != null)
+            {
+                copy.ShaderLocationMapping =
+                    new Dictionary<string, Dictionary<string, int>>(ShaderLocationMapping, ShaderLocationMapping.Comparer);
+                foreach (var mapping in ShaderLocationMapping)
+                {
+                    if (mapping.Value != null)
+                        copy.ShaderLocationMapping[mapping.Key] =
+                            new Dictionary<string, int>(mapping.Value, mapping.Value.Comparer);
+                }
+            }
+            return copy;
+        }
+
         public void Import(Stream stream, ResFile ResFile) {
             ResFileLoader.ImportSection(stream, this, ResFile);
         }
@@ -335,6 +448,18 @@ namespace BfresLibrary
             }
         }
 
+        private static void CopyStrings(ResDict<ResString> source, ResDict<ResString> target)
+        {
+            foreach (var item in source)
+            {
+                target.Add(item.Key, new ResString()
+                {
+                    String = item.Value.String,
+                    Encoding = item.Value.Encoding
+                });
+            }
+        }
+
         private void ReadShaderParams(byte[] data, ByteOrder byteOrder)
         {
             if (data == null)
@@ -409,7 +534,7 @@ namespace BfresLibrary
             return 0;
         }
 
-        private byte[] WriteShaderParams(ByteOrder byteOrder)
+        internal byte[] WriteShaderParams(ByteOrder byteOrder)
         {
             var mem = new MemoryStream();
             using (var writer = new BinaryDataWriter(mem)) {

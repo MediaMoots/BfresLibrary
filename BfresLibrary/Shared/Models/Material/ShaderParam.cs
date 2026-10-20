@@ -83,6 +83,18 @@ namespace BfresLibrary
 
         // ---- METHODS ------------
 
+        /// <summary>
+        /// Creates a copy of the shader parameter, including its array value.
+        /// </summary>
+        /// <returns>A copy of the shader parameter.</returns>
+        internal ShaderParam Copy()
+        {
+            ShaderParam copy = (ShaderParam)MemberwiseClone();
+            if (DataValue is Array array)
+                copy.DataValue = array.Clone();
+            return copy;
+        }
+
         void IResData.Load(ResFileLoader loader)
         {
             if (loader.IsSwitch)
