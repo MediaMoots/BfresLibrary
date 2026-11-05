@@ -28,6 +28,13 @@ namespace BfresLibrary.Switch
             resFile.Name = loader.LoadString();
             long modelOffset = loader.ReadOffset();
             long modelDictOffset = loader.ReadOffset();
+            if (loader.ReadModelMaterialsOnly)
+            {
+                if (resFile.Version != 0x000a0000)
+                    throw new InvalidDataException("Material metadata inspection currently supports only Switch BFRES 10.0.0.");
+                resFile.Models = loader.LoadDictValues<Model>(modelDictOffset, modelOffset);
+                return;
+            }
             if (loader.ResFile.VersionMajor2 >= 9) {
                 loader.ReadBytes(32); //reserved
             }

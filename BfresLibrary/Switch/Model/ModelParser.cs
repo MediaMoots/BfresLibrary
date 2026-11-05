@@ -20,9 +20,11 @@ namespace BfresLibrary.Switch
 
             model.Name = loader.LoadString();
             model.Path = loader.LoadString();
-            model.Skeleton = loader.Load<Skeleton>();
+            if (loader.ReadModelMaterialsOnly) loader.ReadOffset();
+            else model.Skeleton = loader.Load<Skeleton>();
             long VertexArrayOffset = loader.ReadOffset();
-            model.Shapes = loader.LoadDictValues<Shape>();
+            if (loader.ReadModelMaterialsOnly) { loader.ReadOffset(); loader.ReadOffset(); }
+            else model.Shapes = loader.LoadDictValues<Shape>();
             if (loader.ResFile.VersionMajor2 == 9)
             {
                 long materialValuesOffset = loader.ReadOffset();
@@ -63,7 +65,8 @@ namespace BfresLibrary.Switch
                 uint padding = loader.ReadUInt32();
             }
 
-            model.VertexBuffers = loader.LoadList<VertexBuffer>(numVertexBuffer, (uint)VertexArrayOffset);
+            if (!loader.ReadModelMaterialsOnly)
+                model.VertexBuffers = loader.LoadList<VertexBuffer>(numVertexBuffer, (uint)VertexArrayOffset);
         }
 
         public static void Write(ResFileSwitchSaver saver, Model model)

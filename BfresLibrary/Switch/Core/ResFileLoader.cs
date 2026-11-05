@@ -115,7 +115,11 @@ namespace BfresLibrary.Switch.Core
                 return StringCache.Strings[offset];
 
             if (offset < 0 || offset > this.BaseStream.Length)
+            {
+                if (ReadModelMaterialsOnly)
+                    throw new InvalidDataException($"Unresolved material metadata string reference 0x{offset:X16}. Load the matching external string table first.");
                 return "";
+            }
 
             encoding = encoding ?? Encoding;
             using (TemporarySeek(offset, SeekOrigin.Begin))

@@ -81,6 +81,25 @@ namespace BfresLibrary
         // ---- METHODS (PUBLIC) ---------------------------------------------------------------------------------------
 
         /// <summary>
+        /// Reads Switch v10 model/material tables without following geometry or GPU payloads.
+        /// Requires any referenced external strings in StringCache. Closes the stream after parsing.
+        /// </summary>
+        /// <remarks>
+        /// Geometry, animation, and GPU data are not loaded. Saving or exporting the result
+        /// can discard uninspected data.
+        /// </remarks>
+        public static ResFile ReadMaterialMetadata(Stream stream)
+        {
+            if (!IsSwitchBinary(stream))
+                throw new InvalidDataException("Material metadata inspection requires a Switch BFRES.");
+            var resource = new ResFile();
+            using (ResFileLoader loader = new Switch.Core.ResFileSwitchLoader(resource, stream)
+                { ReadModelMaterialsOnly = true })
+                loader.Execute();
+            return resource;
+        }
+
+        /// <summary>
         /// Saves the contents in the given <paramref name="stream"/> and optionally leaves it open
         /// </summary>
         /// <param name="stream">The <see cref="Stream"/> to save the contents into.</param>

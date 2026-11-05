@@ -64,6 +64,9 @@ namespace BfresLibrary.Core
 
         internal bool IsSwitch { get; set; }
 
+        // Skips geometry, animation, and GPU sections for Switch v10 material reads.
+        internal bool ReadModelMaterialsOnly { get; set; }
+
         /// <summary>
         /// Gets the loaded <see cref="Bfres.ResFile"/> instance.
         /// </summary>
