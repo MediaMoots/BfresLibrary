@@ -110,9 +110,8 @@ namespace BfresLibrary.Switch.Core
         {
             var offset = ReadInt64();
             if (offset == 0) return null;
-
-            if (StringCache.Strings.ContainsKey(offset))
-                return StringCache.Strings[offset];
+            if (StringCache.TryGetExternalString(offset, BaseStream.Length, out var external))
+                return external;
 
             if (offset < 0 || offset > this.BaseStream.Length)
             {
@@ -140,9 +139,8 @@ namespace BfresLibrary.Switch.Core
                 {
                     var offset = offsets[i];
                     if (offset == 0) continue;
-
-                    if (StringCache.Strings.ContainsKey(offset))
-                        names[i] = StringCache.Strings[offset];
+                    if (StringCache.TryGetExternalString(offset, BaseStream.Length, out var external))
+                        names[i] = external;
                     else
                     {
                         Position = offset;
